@@ -1,0 +1,2705 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Monto" />
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>Monto — Calculadora de Divisas en Tiempo Real</title>
+  <link rel="stylesheet" href="styles.css">
+<style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      box-sizing: border-box;
+    }
+
+    input {
+      user-select: text;
+    }
+
+    html, body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overscroll-behavior-y: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Tactile press effect for calculator keys */
+    .calc-key {
+      transition: transform 0.08s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease;
+    }
+    .calc-key:active {
+      transform: scale(0.94);
+    }
+
+    /* Smooth vertical track animation between Cuenta 1 and Cuenta 2 */
+    .calc-track {
+      transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: transform;
+    }
+    .calc-track.is-dragging {
+      transition: none;
+    }
+
+    /* Modal entrance animation */
+    @keyframes modalSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    .modal-animate {
+      animation: modalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Hide scrollbars cleanly inside scrollable modal lists */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 min-h-screen flex items-center justify-center transition-colors duration-200">
+
+  <!-- Mobile App Shell Container -->
+  <div id="app-shell" class="w-full max-w-[430px] h-[100dvh] sm:h-[844px] sm:max-h-[92vh] bg-white dark:bg-zinc-900 sm:rounded-[2.5rem] sm:shadow-2xl sm:border sm:border-slate-200/80 dark:sm:border-zinc-800 flex flex-col justify-between overflow-hidden relative">
+
+    <!-- ==================== HEADER SUPERIOR ==================== -->
+    <header id="app-header" class="px-5 pt-3.5 pb-1.5 flex items-center justify-between gap-2 z-20 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs shrink-0">
+      <button id="btn-open-rates" type="button" class="flex-1 flex items-center justify-between bg-slate-100 hover:bg-slate-200/70 dark:bg-zinc-800/90 dark:hover:bg-zinc-800 px-3.5 py-2 rounded-2xl transition-colors text-left group">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span id="rate-badge-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
+          <div class="truncate">
+            <div class="flex items-center gap-1.5">
+              <span id="header-rate-label" class="text-xs font-semibold text-slate-500 dark:text-zinc-400">Dólar BCV</span>
+              <span id="header-rate-status" class="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">Guardada</span>
+            </div>
+            <div id="header-rate-value" class="text-sm font-bold text-slate-900 dark:text-white tabular-nums tracking-tight">
+              1.050,00 Bs
+            </div>
+          </div>
+        </div>
+        <svg class="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-zinc-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <button id="btn-quick-history" type="button" title="Historial y suma acumulada" class="relative p-3 rounded-2xl bg-slate-100 hover:bg-slate-200/70 dark:bg-zinc-800/90 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 transition-colors shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+        <span id="history-badge" class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center tabular-nums">0</span>
+      </button>
+
+      <button id="btn-open-menu" type="button" title="Opciones" class="p-3 rounded-2xl bg-slate-100 hover:bg-slate-200/70 dark:bg-zinc-800/90 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 transition-colors shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </header>
+
+    <!-- ==================== SELECTOR DE DOBLE CALCULADORA ==================== -->
+    <div id="account-switcher-bar" class="px-5 py-1 flex items-center justify-between gap-2 z-20 shrink-0">
+      <div class="inline-flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-zinc-800/90 border border-slate-200/70 dark:border-zinc-700/60">
+        <button type="button" data-switch-calc="0" class="calc-tab-btn px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-300 shadow-2xs">
+          Cuenta 1
+        </button>
+        <button type="button" data-switch-calc="1" class="calc-tab-btn px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200">
+          Cuenta 2
+        </button>
+      </div>
+
+      <button id="btn-swipe-toggle" type="button" class="flex items-center gap-1 text-[11px] font-medium text-slate-400 hover:text-indigo-600 dark:text-zinc-500 dark:hover:text-indigo-400 transition-colors">
+        <span id="swipe-hint-text">Desliza ↓ Cuenta 2</span>
+        <svg id="swipe-hint-icon" class="w-3.5 h-3.5 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- ==================== CONTENEDOR VERTICAL DESLIZABLE ==================== -->
+    <div id="swipe-viewport" class="flex-1 min-h-0 overflow-hidden relative">
+      <div id="calc-track" class="calc-track w-full h-[200%] flex flex-col">
+
+        <!-- ==================== SLIDE 0: CUENTA 1 (ÍNDIGO / VIOLETA) ==================== -->
+        <div class="calc-slide w-full h-1/2 flex flex-col justify-between min-h-0" data-calc-index="0">
+          <main class="flex-1 px-5 py-1.5 flex flex-col justify-between min-h-0">
+            <!-- Acciones rápidas -->
+            <div class="flex items-center justify-between gap-2 pt-0.5 shrink-0">
+              <button type="button" data-action-pm="0" class="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-300 dark:hover:bg-indigo-500/25 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <span>Pago Móvil + Bs</span>
+              </button>
+
+              <div class="flex items-center gap-1.5">
+                <button type="button" data-action-receipt="0" class="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300 transition-colors">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>Recibo</span>
+                </button>
+
+                <button type="button" data-action-save="0" class="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300 transition-colors">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>Sumar</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Zona Central: Operación Aritmética Principal + Tarjetas -->
+            <div id="display-zone-0" class="display-swipe-zone my-auto flex flex-col justify-center gap-1.5 py-1">
+              <!-- PANEL ARITMÉTICO SIN SIGNOS DE MONEDA (SELECCIONABLE) -->
+              <div id="arith-panel-0" role="button" tabindex="0" class="rounded-3xl px-4 py-2.5 transition-all duration-200 cursor-pointer border-2 border-indigo-500/80 bg-indigo-50/40 dark:bg-indigo-950/25 dark:border-indigo-500/70 shadow-2xs">
+                <div class="flex items-center justify-between gap-2 mb-0.5">
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-600 text-white">Cuenta 1 · Operación</span>
+                    <span id="arith-active-hint-0" class="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">Escribiendo</span>
+                    <button type="button" data-calc="0" data-action="sign" title="Cambiar signo (+/-)" class="px-2 py-0.5 rounded-md bg-white hover:bg-indigo-50 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-[10px] font-bold text-slate-700 dark:text-zinc-200 border border-slate-200/70 dark:border-zinc-600 transition-colors">+/−</button>
+                  </div>
+                  <span id="arith-result-0" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 tabular-nums truncate text-right"></span>
+                </div>
+                <div id="expression-preview-0" class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tabular-nums truncate text-right min-h-[28px] leading-snug">0</div>
+              </div>
+
+              <!-- TARJETA DIVISA -->
+              <div id="card-foreign-0" role="button" tabindex="0" class="group relative rounded-3xl p-3.5 transition-all duration-200 cursor-pointer border-2 border-transparent bg-slate-100/80 dark:bg-zinc-800/70 hover:bg-slate-100 dark:hover:bg-zinc-800">
+                <div class="flex items-center justify-between mb-1">
+                  <div class="flex items-center gap-2">
+                    <span id="foreign-tag-0" class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300">USD ($)</span>
+                    <span id="foreign-active-hint-0" class="hidden text-[11px] font-medium text-indigo-600 dark:text-indigo-400">Escribiendo</span>
+                  </div>
+                  <button type="button" data-copy="foreign" data-calc="0" class="copy-btn p-1.5 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-white/80 dark:hover:bg-zinc-800 dark:hover:text-indigo-400 transition-colors" title="Copiar monto en divisas">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+                <div class="flex items-baseline justify-end gap-1.5 overflow-hidden">
+                  <span id="foreign-symbol-0" class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">$</span>
+                  <span id="foreign-amount-0" class="text-3xl sm:text-[38px] font-extrabold tracking-tight text-slate-900 dark:text-white tabular-nums truncate leading-none">0,00</span>
+                </div>
+              </div>
+
+              <!-- BOTÓN INVERTIR SENTIDO -->
+              <div class="relative h-2 flex items-center justify-center z-10">
+                <button id="btn-swap-currency-0" type="button" title="Invertir dirección de conversión" class="w-8 h-8 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-md flex items-center justify-center text-slate-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-90 transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- TARJETA BOLÍVARES -->
+              <div id="card-ves-0" role="button" tabindex="0" class="group relative rounded-3xl p-3.5 transition-all duration-200 cursor-pointer border-2 border-transparent bg-slate-100/80 dark:bg-zinc-800/70 hover:bg-slate-100 dark:hover:bg-zinc-800">
+                <div class="flex items-center justify-between mb-1">
+                  <div class="flex items-center gap-2">
+                    <span id="ves-tag-0" class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300">VES (Bs)</span>
+                    <span id="ves-active-hint-0" class="hidden text-[11px] font-medium text-indigo-600 dark:text-indigo-400">Escribiendo</span>
+                  </div>
+                  <button type="button" data-copy="ves" data-calc="0" class="copy-btn p-1.5 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-white/80 dark:hover:bg-zinc-700 dark:hover:text-indigo-400 transition-colors" title="Copiar monto en Bolívares">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+                <div class="flex items-baseline justify-end gap-1.5 overflow-hidden">
+                  <span id="ves-amount-0" class="text-3xl sm:text-4xl font-bold tracking-tight text-slate-700 dark:text-zinc-200 tabular-nums truncate leading-none">0,00</span>
+                  <span class="text-lg font-bold text-slate-400 dark:text-zinc-500">Bs</span>
+                </div>
+              </div>
+
+              <p class="text-[11px] text-center text-slate-400 dark:text-zinc-500 pt-0.5">
+                Mantén presionado para recibo · Desliza ↓ para Cuenta 2
+              </p>
+            </div>
+          </main>
+
+          <!-- TECLADO CUENTA 1 -->
+          <section class="px-4 pb-4 pt-2 bg-slate-50/90 dark:bg-zinc-900/95 border-t border-slate-200/70 dark:border-zinc-800/80 shrink-0">
+            <div class="grid grid-cols-4 gap-2">
+              <button type="button" data-calc="0" data-action="clear" class="calc-key h-12 sm:h-13 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 font-bold text-lg flex items-center justify-center">C</button>
+              <button type="button" data-calc="0" data-action="backspace" aria-label="Borrar" class="calc-key h-12 sm:h-13 rounded-2xl bg-slate-200/70 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-semibold text-lg flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" />
+                </svg>
+              </button>
+              <button type="button" data-calc="0" data-action="percent" class="calc-key h-12 sm:h-13 rounded-2xl bg-slate-200/70 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-xl flex items-center justify-center">%</button>
+              <button type="button" data-calc="0" data-op="/" class="calc-key h-12 sm:h-13 rounded-2xl bg-indigo-100/80 hover:bg-indigo-200/80 dark:bg-indigo-500/20 dark:hover:bg-indigo-500/30 text-indigo-600 dark:text-indigo-300 font-bold text-2xl flex items-center justify-center">÷</button>
+
+              <button type="button" data-calc="0" data-num="7" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">7</button>
+              <button type="button" data-calc="0" data-num="8" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">8</button>
+              <button type="button" data-calc="0" data-num="9" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">9</button>
+              <button type="button" data-calc="0" data-op="*" class="calc-key h-12 sm:h-13 rounded-2xl bg-indigo-100/80 hover:bg-indigo-200/80 dark:bg-indigo-500/20 dark:hover:bg-indigo-500/30 text-indigo-600 dark:text-indigo-300 font-bold text-2xl flex items-center justify-center">×</button>
+
+              <button type="button" data-calc="0" data-num="4" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">4</button>
+              <button type="button" data-calc="0" data-num="5" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">5</button>
+              <button type="button" data-calc="0" data-num="6" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">6</button>
+              <button type="button" data-calc="0" data-op="-" class="calc-key h-12 sm:h-13 rounded-2xl bg-indigo-100/80 hover:bg-indigo-200/80 dark:bg-indigo-500/20 dark:hover:bg-indigo-500/30 text-indigo-600 dark:text-indigo-300 font-bold text-2xl flex items-center justify-center">−</button>
+
+              <button type="button" data-calc="0" data-num="1" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">1</button>
+              <button type="button" data-calc="0" data-num="2" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">2</button>
+              <button type="button" data-calc="0" data-num="3" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">3</button>
+              <button type="button" data-calc="0" data-op="+" class="calc-key h-12 sm:h-13 rounded-2xl bg-indigo-100/80 hover:bg-indigo-200/80 dark:bg-indigo-500/20 dark:hover:bg-indigo-500/30 text-indigo-600 dark:text-indigo-300 font-bold text-2xl flex items-center justify-center">+</button>
+
+              <button type="button" data-calc="0" data-num="00" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-semibold text-xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">00</button>
+              <button type="button" data-calc="0" data-num="0" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">0</button>
+              <button type="button" data-calc="0" data-action="decimal" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-bold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40">,</button>
+              <button type="button" data-calc="0" data-action="equals" class="calc-key h-12 sm:h-13 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-2xl shadow-lg shadow-indigo-600/30 flex items-center justify-center">=</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- ==================== SLIDE 1: CUENTA 2 (TEAL / ESMERALDA) ==================== -->
+        <div class="calc-slide w-full h-1/2 flex flex-col justify-between min-h-0" data-calc-index="1">
+          <main class="flex-1 px-5 py-1.5 flex flex-col justify-between min-h-0">
+            <!-- Acciones rápidas -->
+            <div class="flex items-center justify-between gap-2 pt-0.5 shrink-0">
+              <button type="button" data-action-pm="1" class="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-teal-50 text-teal-600 hover:bg-teal-100 dark:bg-teal-500/15 dark:text-teal-300 dark:hover:bg-teal-500/25 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <span>Pago Móvil + Bs</span>
+              </button>
+
+              <div class="flex items-center gap-1.5">
+                <button type="button" data-action-receipt="1" class="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300 transition-colors">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>Recibo</span>
+                </button>
+
+                <button type="button" data-action-save="1" class="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300 transition-colors">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>Sumar</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Zona Central: Operación Aritmética Principal + Tarjetas -->
+            <div id="display-zone-1" class="display-swipe-zone my-auto flex flex-col justify-center gap-1.5 py-1">
+              <!-- PANEL ARITMÉTICO SIN SIGNOS DE MONEDA (SELECCIONABLE) -->
+              <div id="arith-panel-1" role="button" tabindex="0" class="rounded-3xl px-4 py-2.5 transition-all duration-200 cursor-pointer border-2 border-teal-500/80 bg-teal-50/40 dark:bg-teal-950/25 dark:border-teal-500/70 shadow-2xs">
+                <div class="flex items-center justify-between gap-2 mb-0.5">
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-teal-600 text-white">Cuenta 2 · Operación</span>
+                    <span id="arith-active-hint-1" class="text-[11px] font-semibold text-teal-600 dark:text-teal-400">Escribiendo</span>
+                    <button type="button" data-calc="1" data-action="sign" title="Cambiar signo (+/-)" class="px-2 py-0.5 rounded-md bg-white hover:bg-teal-50 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-[10px] font-bold text-slate-700 dark:text-zinc-200 border border-slate-200/70 dark:border-zinc-600 transition-colors">+/−</button>
+                  </div>
+                  <span id="arith-result-1" class="text-xs font-bold text-teal-600 dark:text-teal-400 tabular-nums truncate text-right"></span>
+                </div>
+                <div id="expression-preview-1" class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tabular-nums truncate text-right min-h-[28px] leading-snug">0</div>
+              </div>
+
+              <!-- TARJETA DIVISA -->
+              <div id="card-foreign-1" role="button" tabindex="0" class="group relative rounded-3xl p-3.5 transition-all duration-200 cursor-pointer border-2 border-transparent bg-slate-100/80 dark:bg-zinc-800/70 hover:bg-slate-100 dark:hover:bg-zinc-800">
+                <div class="flex items-center justify-between mb-1">
+                  <div class="flex items-center gap-2">
+                    <span id="foreign-tag-1" class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300">USD ($)</span>
+                    <span id="foreign-active-hint-1" class="hidden text-[11px] font-medium text-teal-600 dark:text-teal-400">Escribiendo</span>
+                  </div>
+                  <button type="button" data-copy="foreign" data-calc="1" class="copy-btn p-1.5 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-white/80 dark:hover:bg-zinc-800 dark:hover:text-teal-400 transition-colors" title="Copiar monto en divisas">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+                <div class="flex items-baseline justify-end gap-1.5 overflow-hidden">
+                  <span id="foreign-symbol-1" class="text-2xl font-bold text-teal-600 dark:text-teal-400">$</span>
+                  <span id="foreign-amount-1" class="text-3xl sm:text-[38px] font-extrabold tracking-tight text-slate-900 dark:text-white tabular-nums truncate leading-none">0,00</span>
+                </div>
+              </div>
+
+              <!-- BOTÓN INVERTIR SENTIDO -->
+              <div class="relative h-2 flex items-center justify-center z-10">
+                <button id="btn-swap-currency-1" type="button" title="Invertir dirección de conversión" class="w-8 h-8 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shadow-md flex items-center justify-center text-slate-600 dark:text-zinc-300 hover:text-teal-600 dark:hover:text-teal-400 active:scale-90 transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- TARJETA BOLÍVARES -->
+              <div id="card-ves-1" role="button" tabindex="0" class="group relative rounded-3xl p-3.5 transition-all duration-200 cursor-pointer border-2 border-transparent bg-slate-100/80 dark:bg-zinc-800/70 hover:bg-slate-100 dark:hover:bg-zinc-800">
+                <div class="flex items-center justify-between mb-1">
+                  <div class="flex items-center gap-2">
+                    <span id="ves-tag-1" class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300">VES (Bs)</span>
+                    <span id="ves-active-hint-1" class="hidden text-[11px] font-medium text-teal-600 dark:text-teal-400">Escribiendo</span>
+                  </div>
+                  <button type="button" data-copy="ves" data-calc="1" class="copy-btn p-1.5 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-white/80 dark:hover:bg-zinc-700 dark:hover:text-teal-400 transition-colors" title="Copiar monto en Bolívares">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+                <div class="flex items-baseline justify-end gap-1.5 overflow-hidden">
+                  <span id="ves-amount-1" class="text-3xl sm:text-4xl font-bold tracking-tight text-slate-700 dark:text-zinc-200 tabular-nums truncate leading-none">0,00</span>
+                  <span class="text-lg font-bold text-slate-400 dark:text-zinc-500">Bs</span>
+                </div>
+              </div>
+
+              <p class="text-[11px] text-center text-slate-400 dark:text-zinc-500 pt-0.5">
+                Mantén presionado para recibo · Desliza ↑ para Cuenta 1
+              </p>
+            </div>
+          </main>
+
+          <!-- TECLADO CUENTA 2 -->
+          <section class="px-4 pb-4 pt-2 bg-slate-50/90 dark:bg-zinc-900/95 border-t border-slate-200/70 dark:border-zinc-800/80 shrink-0">
+            <div class="grid grid-cols-4 gap-2">
+              <button type="button" data-calc="1" data-action="clear" class="calc-key h-12 sm:h-13 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 font-bold text-lg flex items-center justify-center">C</button>
+              <button type="button" data-calc="1" data-action="backspace" aria-label="Borrar" class="calc-key h-12 sm:h-13 rounded-2xl bg-slate-200/70 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-semibold text-lg flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" />
+                </svg>
+              </button>
+              <button type="button" data-calc="1" data-action="percent" class="calc-key h-12 sm:h-13 rounded-2xl bg-slate-200/70 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-xl flex items-center justify-center">%</button>
+              <button type="button" data-calc="1" data-op="/" class="calc-key h-12 sm:h-13 rounded-2xl bg-teal-100/80 hover:bg-teal-200/80 dark:bg-teal-500/20 dark:hover:bg-teal-500/30 text-teal-700 dark:text-teal-300 font-bold text-2xl flex items-center justify-center">÷</button>
+
+              <button type="button" data-calc="1" data-num="7" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">7</button>
+              <button type="button" data-calc="1" data-num="8" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">8</button>
+              <button type="button" data-calc="1" data-num="9" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">9</button>
+              <button type="button" data-calc="1" data-op="*" class="calc-key h-12 sm:h-13 rounded-2xl bg-teal-100/80 hover:bg-teal-200/80 dark:bg-teal-500/20 dark:hover:bg-teal-500/30 text-teal-700 dark:text-teal-300 font-bold text-2xl flex items-center justify-center">×</button>
+
+              <button type="button" data-calc="1" data-num="4" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">4</button>
+              <button type="button" data-calc="1" data-num="5" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">5</button>
+              <button type="button" data-calc="1" data-num="6" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">6</button>
+              <button type="button" data-calc="1" data-op="-" class="calc-key h-12 sm:h-13 rounded-2xl bg-teal-100/80 hover:bg-teal-200/80 dark:bg-teal-500/20 dark:hover:bg-teal-500/30 text-teal-700 dark:text-teal-300 font-bold text-2xl flex items-center justify-center">−</button>
+
+              <button type="button" data-calc="1" data-num="1" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">1</button>
+              <button type="button" data-calc="1" data-num="2" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">2</button>
+              <button type="button" data-calc="1" data-num="3" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">3</button>
+              <button type="button" data-calc="1" data-op="+" class="calc-key h-12 sm:h-13 rounded-2xl bg-teal-100/80 hover:bg-teal-200/80 dark:bg-teal-500/20 dark:hover:bg-teal-500/30 text-teal-700 dark:text-teal-300 font-bold text-2xl flex items-center justify-center">+</button>
+
+              <button type="button" data-calc="1" data-num="00" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-semibold text-xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">00</button>
+              <button type="button" data-calc="1" data-num="0" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-semibold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40 tabular-nums">0</button>
+              <button type="button" data-calc="1" data-action="decimal" class="calc-key h-12 sm:h-13 rounded-2xl bg-white hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-slate-900 dark:text-white font-bold text-2xl shadow-2xs border border-slate-200/50 dark:border-zinc-700/40">,</button>
+              <button type="button" data-calc="1" data-action="equals" class="calc-key h-12 sm:h-13 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-2xl shadow-lg shadow-teal-600/30 flex items-center justify-center">=</button>
+            </div>
+          </section>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ==================== NOTIFICACIÓN TOAST ==================== -->
+    <div id="toast" class="pointer-events-none fixed bottom-24 left-1/2 -translate-x-1/2 z-50 opacity-0 transition-all duration-200 transform translate-y-2">
+      <div class="bg-slate-900/95 dark:bg-zinc-100/95 text-white dark:text-zinc-900 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 whitespace-nowrap backdrop-blur-md">
+        <svg class="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        <span id="toast-message">Copiado al portapapeles</span>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL 1: SELECTOR DE TASAS ==================== -->
+    <div id="modal-rates" class="hidden absolute inset-0 z-40 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
+      <div class="modal-animate w-full bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-zinc-800 max-h-[88vh] flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg font-bold text-slate-900 dark:text-white">Tasa de Referencia</h2>
+              <span id="rates-modal-account-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">Cuenta 1</span>
+            </div>
+            <p id="rates-last-updated" class="text-xs text-slate-500 dark:text-zinc-400">Usando valores guardados localmente</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button id="btn-refresh-rates" type="button" title="Actualizar tasas" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300 transition-colors">
+              <svg id="refresh-icon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            <button type="button" data-close-modal="modal-rates" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-y-auto no-scrollbar py-3 space-y-2.5">
+          <button type="button" data-select-rate="bcv_usd" class="rate-option w-full p-3.5 rounded-2xl border-2 text-left flex items-center justify-between transition-all">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-center text-base">$</div>
+              <div>
+                <div class="font-bold text-sm text-slate-900 dark:text-white">Dólar BCV</div>
+                <div class="text-xs text-slate-500 dark:text-zinc-400">Tasa Oficial Banco Central</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div id="rate-val-bcv_usd" class="font-extrabold text-base tabular-nums text-slate-900 dark:text-white">-- Bs</div>
+              <span class="rate-check text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hidden">Activa</span>
+            </div>
+          </button>
+
+          <button type="button" data-select-rate="bcv_eur" class="rate-option w-full p-3.5 rounded-2xl border-2 text-left flex items-center justify-between transition-all">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold flex items-center justify-center text-base">€</div>
+              <div>
+                <div class="font-bold text-sm text-slate-900 dark:text-white">Euro BCV</div>
+                <div class="text-xs text-slate-500 dark:text-zinc-400">Tasa Oficial Euro</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div id="rate-val-bcv_eur" class="font-extrabold text-base tabular-nums text-slate-900 dark:text-white">-- Bs</div>
+              <span class="rate-check text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hidden">Activa</span>
+            </div>
+          </button>
+
+          <button type="button" data-select-rate="usdt" class="rate-option w-full p-3.5 rounded-2xl border-2 text-left flex items-center justify-between transition-all">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold flex items-center justify-center text-xs">USDT</div>
+              <div>
+                <div class="font-bold text-sm text-slate-900 dark:text-white">USDT / Paralelo</div>
+                <div class="text-xs text-slate-500 dark:text-zinc-400">Referencia mercado digital</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div id="rate-val-usdt" class="font-extrabold text-base tabular-nums text-slate-900 dark:text-white">-- Bs</div>
+              <span class="rate-check text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hidden">Activa</span>
+            </div>
+          </button>
+
+          <button type="button" data-select-rate="weekend" class="rate-option w-full p-3.5 rounded-2xl border-2 text-left flex items-center justify-between transition-all">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold flex items-center justify-center text-xs">PROM</div>
+              <div>
+                <div class="font-bold text-sm text-slate-900 dark:text-white">Promedio / Fin de Semana</div>
+                <div class="text-xs text-slate-500 dark:text-zinc-400">Media entre BCV y USDT</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div id="rate-val-weekend" class="font-extrabold text-base tabular-nums text-slate-900 dark:text-white">-- Bs</div>
+              <span class="rate-check text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hidden">Activa</span>
+            </div>
+          </button>
+
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/70 border border-slate-200/80 dark:border-zinc-700/80 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Tasa Personalizada</span>
+              <span id="custom-rate-active-badge" class="hidden text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">Activa</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <input id="input-custom-rate" type="number" step="any" min="0.000001" placeholder="Ej: 1050.50" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-sm font-bold text-slate-900 dark:text-white tabular-nums focus:outline-none focus:border-indigo-500" />
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Bs</span>
+              </div>
+              <button id="btn-set-custom-rate" type="button" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-colors shrink-0">
+                Fijar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL 2: MENÚ PRINCIPAL ==================== -->
+    <div id="modal-menu" class="hidden absolute inset-0 z-40 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
+      <div class="modal-animate w-full bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-zinc-800 space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-xl bg-indigo-600 text-white font-extrabold flex items-center justify-center text-sm">M</div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Monto App</h2>
+          </div>
+          <button type="button" data-close-modal="modal-menu" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="space-y-2">
+          <button id="menu-open-history" type="button" class="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/70 dark:hover:bg-zinc-800 flex items-center justify-between transition-colors">
+            <div class="flex items-center gap-3">
+              <span class="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </span>
+              <div class="text-left">
+                <div class="text-sm font-bold text-slate-900 dark:text-white">Historial de cuentas</div>
+                <div class="text-xs text-slate-500 dark:text-zinc-400">Ver suma acumulada y exportar</div>
+              </div>
+            </div>
+            <span id="menu-history-count" class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200">Cuenta 1: 0</span>
+          </button>
+
+          <button id="menu-open-pagomovil" type="button" class="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/70 dark:hover:bg-zinc-800 flex items-center justify-between transition-colors">
+            <div class="flex items-center gap-3">
+              <span class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              </span>
+              <div class="text-left">
+                <div class="text-sm font-bold text-slate-900 dark:text-white">Mis datos Pago Móvil</div>
+                <div class="text-xs text-slate-500 dark:text-zinc-400">Copia tus datos + monto en Bs con 1 toque</div>
+              </div>
+            </div>
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          <button id="menu-open-rate-history" type="button" class="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/70 dark:hover:bg-zinc-800 flex items-center justify-between transition-colors">
+            <div class="flex items-center gap-3">
+              <span class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+              </span>
+              <div class="text-left">
+                <div class="text-sm font-bold text-slate-900 dark:text-white">Tasas anteriores</div>
+                <div class="text-xs text-slate-500 dark:text-zinc-400">Registro histórico de tasas consultadas</div>
+              </div>
+            </div>
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          <button id="menu-toggle-theme" type="button" class="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/70 dark:hover:bg-zinc-800 flex items-center justify-between transition-colors">
+            <div class="flex items-center gap-3">
+              <span class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              </span>
+              <div class="text-left">
+                <div class="text-sm font-bold text-slate-900 dark:text-white">Apariencia</div>
+                <div id="theme-status-label" class="text-xs text-slate-500 dark:text-zinc-400">Modo Claro activo</div>
+              </div>
+            </div>
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300">Cambiar</span>
+          </button>
+
+          <button id="menu-open-share" type="button" class="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/70 dark:hover:bg-zinc-800 flex items-center justify-between transition-colors">
+            <div class="flex items-center gap-3">
+              <span class="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              </span>
+              <div class="text-left">
+                <div class="text-sm font-bold text-slate-900 dark:text-white">Compartir App</div>
+                <div class="text-xs text-slate-500 dark:text-zinc-400">Código QR y enlace directo</div>
+              </div>
+            </div>
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          <button id="menu-install-pwa" type="button" class="w-full p-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-between transition-colors shadow-md shadow-indigo-600/20">
+            <div class="flex items-center gap-3">
+              <span class="w-9 h-9 rounded-xl bg-white/15 text-white flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </span>
+              <div class="text-left">
+                <div class="text-sm font-bold">Instalar como App</div>
+                <div id="pwa-install-subtitle" class="text-xs text-indigo-100">Añadir a pantalla de inicio (Android / iOS)</div>
+              </div>
+            </div>
+            <span class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-white/20">Instalar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL 3: HISTORIAL ==================== -->
+    <div id="modal-history" class="hidden absolute inset-0 z-40 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
+      <div class="modal-animate w-full bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-zinc-800 h-[82vh] flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg font-bold text-slate-900 dark:text-white">Historial</h2>
+              <span id="history-modal-account-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">Cuenta 1</span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-zinc-400">Operaciones independientes de esta cuenta</p>
+          </div>
+          <button type="button" data-close-modal="modal-history" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="my-3 p-4 rounded-2xl bg-indigo-600 text-white flex items-center justify-between shadow-lg shadow-indigo-600/20">
+          <div>
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-indigo-200">Total Acumulado</div>
+            <div id="history-total-foreign" class="text-2xl font-extrabold tabular-nums">$0,00</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-indigo-200">En Bolívares</div>
+            <div id="history-total-ves" class="text-lg font-bold tabular-nums">0,00 Bs</div>
+          </div>
+        </div>
+
+        <div id="history-list" class="flex-1 overflow-y-auto no-scrollbar space-y-2 py-1"></div>
+
+        <div class="pt-3 border-t border-slate-100 dark:border-zinc-800 grid grid-cols-3 gap-2">
+          <button id="btn-clear-history" type="button" class="py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 text-xs font-bold transition-colors">
+            Borrar todo
+          </button>
+          <button id="btn-export-whatsapp" type="button" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
+            <span>WhatsApp</span>
+          </button>
+          <button id="btn-export-image-report" type="button" class="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
+            <span>Imagen</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL 4: TASAS ANTERIORES ==================== -->
+    <div id="modal-rate-history" class="hidden absolute inset-0 z-40 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
+      <div class="modal-animate w-full bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-zinc-800 max-h-[80vh] flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">Tasas Anteriores</h2>
+            <p class="text-xs text-slate-500 dark:text-zinc-400">Historial de tasas consultadas o fijadas</p>
+          </div>
+          <button type="button" data-close-modal="modal-rate-history" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div id="rate-history-list" class="flex-1 overflow-y-auto no-scrollbar space-y-2 py-3"></div>
+
+        <button id="btn-clear-rate-history" type="button" class="w-full py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 text-xs font-bold transition-colors">
+          Limpiar registro de tasas
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL 5: PAGO MÓVIL ==================== -->
+    <div id="modal-pagomovil" class="hidden absolute inset-0 z-40 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
+      <div class="modal-animate w-full bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-zinc-800 space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">Datos Pago Móvil</h2>
+            <p class="text-xs text-slate-500 dark:text-zinc-400">Se guarda solo en tu dispositivo</p>
+          </div>
+          <button type="button" data-close-modal="modal-pagomovil" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-zinc-400 mb-1">Banco (Código o Nombre)</label>
+            <input id="pm-bank" type="text" placeholder="Ej: 0102 - Banco de Venezuela" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-sm font-medium focus:outline-none focus:border-indigo-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-zinc-400 mb-1">Cédula / RIF</label>
+            <input id="pm-id" type="text" placeholder="Ej: V-12345678" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-sm font-medium focus:outline-none focus:border-indigo-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-zinc-400 mb-1">Teléfono</label>
+            <input id="pm-phone" type="tel" placeholder="Ej: 0414-1234567" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-sm font-medium focus:outline-none focus:border-indigo-500" />
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-1">
+          <button id="btn-save-pagomovil" type="button" class="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-colors">
+            Guardar datos
+          </button>
+          <button id="btn-test-copy-pm" type="button" class="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-colors">
+            Copiar ahora
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL 6: RECIBO VISUAL (CANVAS PNG) ==================== -->
+    <div id="modal-receipt" class="hidden absolute inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+      <div class="modal-animate w-full bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-zinc-800 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-slate-900 dark:text-white">Comprobante de Cálculo</h3>
+          <button type="button" data-close-modal="modal-receipt" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-950 flex justify-center">
+          <img id="receipt-preview-img" alt="Comprobante de cálculo" class="w-full h-auto object-contain" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <button id="btn-download-receipt" type="button" class="py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>Descargar PNG</span>
+          </button>
+          <button id="btn-share-receipt-wa" type="button" class="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
+            <span>Enviar WhatsApp</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL 7: COMPARTIR APP (QR) ==================== -->
+    <div id="modal-share" class="hidden absolute inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <div class="modal-animate w-full bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-zinc-800 text-center space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-slate-900 dark:text-white">Compartir Calculadora</h3>
+          <button type="button" data-close-modal="modal-share" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="p-4 bg-white rounded-2xl border border-slate-200 inline-block mx-auto">
+          <canvas id="qr-canvas" width="180" height="180" class="block"></canvas>
+        </div>
+
+        <p class="text-xs text-slate-500 dark:text-zinc-400">Escanea el código o copia el enlace para abrir la calculadora en otro dispositivo.</p>
+
+        <button id="btn-copy-app-link" type="button" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-colors">
+          Copiar enlace de la App
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL 8: INSTRUCCIONES INSTALACIÓN APP ==================== -->
+    <div id="modal-install-help" class="hidden absolute inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-3">
+      <div class="modal-animate w-full bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-zinc-800 space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-2xl bg-indigo-600 text-white font-extrabold flex items-center justify-center text-base shadow-md">M</div>
+            <div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Instalar Monto App</h3>
+              <p class="text-xs text-slate-500 dark:text-zinc-400">Acceso directo en pantalla completa</p>
+            </div>
+          </div>
+          <button type="button" data-close-modal="modal-install-help" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="space-y-2.5 text-xs text-slate-600 dark:text-zinc-300">
+          <div class="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800/80 space-y-1">
+            <div class="font-bold text-slate-900 dark:text-white">1. Abre el enlace en tu navegador</div>
+            <p>Sube este archivo <code class="px-1 py-0.5 rounded bg-slate-200 dark:bg-zinc-700 font-mono">index.html</code> gratis a <strong>Netlify Drop</strong>, <strong>Vercel</strong> o <strong>GitHub Pages</strong> para obtener un enlace <code class="font-mono">https://</code>.</p>
+          </div>
+          <div class="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800/80 space-y-1">
+            <div class="font-bold text-slate-900 dark:text-white">2. En Android (Chrome)</div>
+            <p>Toca el menú <strong>⋮</strong> (arriba a la derecha) y pulsa <strong>"Instalar aplicación"</strong> o <strong>"Agregar a la pantalla principal"</strong>. Se instalará como app nativa (WebAPK).</p>
+          </div>
+          <div class="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800/80 space-y-1">
+            <div class="font-bold text-slate-900 dark:text-white">3. En iPhone (Safari)</div>
+            <p>Toca <strong>Compartir</strong> (cuadro con flecha ↑) y elige <strong>"Agregar a inicio"</strong>.</p>
+          </div>
+        </div>
+
+        <button type="button" data-close-modal="modal-install-help" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-colors">
+          Entendido
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // =======================================================================
+      // 0. PWA ENGINE (ICONO VECTORIAL, MANIFEST DINÁMICO Y INSTALACIÓN NATIVA)
+      // =======================================================================
+      let deferredInstallPrompt = null;
+
+      function generatePwaAppIconDataUrl(size) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Rounded squircle background with indigo-to-teal gradient
+        const radius = Math.round(size * 0.22);
+        const grad = ctx.createLinearGradient(0, 0, size, size);
+        grad.addColorStop(0, '#4f46e5');
+        grad.addColorStop(1, '#0d9488');
+
+        ctx.beginPath();
+        ctx.moveTo(radius, 0);
+        ctx.arcTo(size, 0, size, size, radius);
+        ctx.arcTo(size, size, 0, size, radius);
+        ctx.arcTo(0, size, 0, 0, radius);
+        ctx.arcTo(0, 0, size, 0, radius);
+        ctx.closePath();
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Bold "M" emblem + currency accent
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `800 ${Math.round(size * 0.54)}px Inter, -apple-system, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('M', size * 0.5, size * 0.52);
+
+        return canvas.toDataURL('image/png');
+      }
+
+      function setupPwaSupport() {
+        try {
+          const icon192 = generatePwaAppIconDataUrl(192);
+          const icon512 = generatePwaAppIconDataUrl(512);
+
+          const faviconEl = document.getElementById('pwa-app-icon');
+          const appleIconEl = document.getElementById('pwa-apple-icon');
+          if (faviconEl) faviconEl.href = icon192;
+          if (appleIconEl) appleIconEl.href = icon192;
+
+          // A Service Worker debe ser un archivo independiente servido desde HTTPS o localhost.
+          if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+            navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('No se pudo registrar el modo offline:', err));
+          }
+        } catch (err) {
+          console.warn('PWA init warning:', err);
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredInstallPrompt = e;
+          const sub = document.getElementById('pwa-install-subtitle');
+          if (sub) sub.textContent = 'Listo para instalar en tu teléfono';
+        });
+
+        window.addEventListener('appinstalled', () => {
+          deferredInstallPrompt = null;
+          showToast('Monto instalada en tu teléfono');
+        });
+      }
+
+      async function triggerPwaInstall() {
+        closeModal('modal-menu');
+        if (deferredInstallPrompt) {
+          deferredInstallPrompt.prompt();
+          const choice = await deferredInstallPrompt.userChoice;
+          if (choice && choice.outcome === 'accepted') {
+            showToast('Instalando Monto App...');
+          }
+          deferredInstallPrompt = null;
+        } else {
+          openModal('modal-install-help');
+        }
+      }
+
+      // =======================================================================
+      // 1. STATE & STORAGE KEYS FOR DUAL INDEPENDENT CALCULATORS
+      // =======================================================================
+      const STORAGE_KEYS = {
+        RATES: 'monto_rates_v4',
+        CALCS: 'monto_dual_calcs_v4',
+        ACTIVE_CALC: 'monto_active_calc_v4',
+        RATE_HISTORY: 'monto_rate_history_v4',
+        THEME: 'monto_theme_v4',
+        PAGOMOVIL: 'monto_pagomovil_v4'
+      };
+
+      const RATE_META = {
+        bcv_usd: { label: 'Dólar BCV', short: 'USD', symbol: '$' },
+        bcv_eur: { label: 'Euro BCV', short: 'EUR', symbol: '€' },
+        usdt:    { label: 'USDT · Binance P2P', short: 'USDT', symbol: 'USDT' },
+        weekend: { label: 'Promedio / Fin de Semana', short: 'USD', symbol: '$' },
+        custom:  { label: 'Tasa Personalizada', short: 'USD', symbol: '$' }
+      };
+
+      function createDefaultCalcState(name) {
+        return {
+          name,
+          activeRateType: 'bcv_usd',
+          customRate: 1050.00,
+          inputMode: 'arith',          // 'arith' | 'foreign' | 'ves'
+          conversionTarget: 'ves',     // 'ves' | 'foreign'
+          foreignAmount: 0,
+          vesAmount: 0,
+          exactForeignValue: 0,
+          exactVesValue: 0,
+          currencyInputRaw: '0',
+          currencyOverwriteNext: false,
+          tokens: ['0'],
+          arithOverwriteNext: false,
+          history: []
+        };
+      }
+
+      const state = {
+        rates: {
+          bcv_usd: 1050.00,
+          bcv_eur: 1140.00,
+          usdt: 1120.00,
+          weekend: 1085.00,
+          lastUpdated: null,
+          isLive: false
+        },
+        activeCalcIndex: 0,
+        calcs: [
+          createDefaultCalcState('Cuenta 1'),
+          createDefaultCalcState('Cuenta 2')
+        ],
+        rateHistory: [],
+        pagoMovil: {
+          bank: '',
+          id: '',
+          phone: ''
+        },
+        theme: 'light'
+      };
+
+      let activeLongPressTimer = null;
+      let toastTimer = null;
+
+      function getActiveCalc() {
+        return state.calcs[state.activeCalcIndex] || state.calcs[0];
+      }
+
+      // =======================================================================
+      // 2. NUMBER FORMATTING (FULL PRECISION DECIMALS) & ARITHMETIC ENGINE
+      // =======================================================================
+      // Normalize floating-point noise while keeping exact decimal digits needed
+      function cleanExactNumber(val) {
+        if (!isFinite(val) || isNaN(val)) return 0;
+        const normalized = Number(val.toPrecision(12));
+        return Object.is(normalized, -0) ? 0 : normalized;
+      }
+
+      // Format numbers in Venezuelan locale preserving necessary decimals without forced 2-decimal truncation
+      function formatExactVE(value, minDecimals = 2, maxDecimals = 8) {
+        if (!isFinite(value) || isNaN(value)) return '0,00';
+        const cleaned = cleanExactNumber(value);
+        return new Intl.NumberFormat('es-VE', {
+          minimumFractionDigits: minDecimals,
+          maximumFractionDigits: maxDecimals
+        }).format(cleaned);
+      }
+
+      // Format a raw typed string (using '.' internally as decimal point) preserving every entered decimal
+      function formatInputDisplay(rawStr) {
+        if (!rawStr || rawStr === '' || rawStr === '-') return rawStr === '-' ? '-0' : '0,00';
+        const isNegative = rawStr.startsWith('-');
+        const clean = isNegative ? rawStr.slice(1) : rawStr;
+        const parts = clean.split('.');
+        const intNum = parseInt(parts[0] || '0', 10);
+        const intFormatted = new Intl.NumberFormat('es-VE').format(isNaN(intNum) ? 0 : intNum);
+        const decPart = parts.length > 1 ? ',' + parts[1] : '';
+        return (isNegative ? '-' : '') + intFormatted + decPart;
+      }
+
+      // Format a numeric amount so exact decimals are shown (at least 2 decimals for clarity, up to 8 exact decimals)
+      function formatCurrencyExactDisplay(value) {
+        if (!isFinite(value) || isNaN(value)) return '0,00';
+        const cleaned = cleanExactNumber(value);
+        const asStr = cleaned.toString();
+        const decIndex = asStr.indexOf('.');
+        const actualDecs = decIndex >= 0 ? Math.min(8, asStr.length - decIndex - 1) : 0;
+        const minDecs = Math.max(2, actualDecs);
+        return new Intl.NumberFormat('es-VE', {
+          minimumFractionDigits: minDecs,
+          maximumFractionDigits: 8
+        }).format(cleaned);
+      }
+
+      // Evaluate token list respecting *, / before +, -
+      function evaluateTokens(tokens) {
+        if (!Array.isArray(tokens) || tokens.length === 0) return 0;
+        const list = tokens.slice();
+        const last = list[list.length - 1];
+        if (['+', '-', '*', '/'].includes(last)) {
+          list.pop();
+        }
+        if (list.length === 0) return 0;
+
+        const parsed = list.map((t) => (['+', '-', '*', '/'].includes(t) ? t : (parseFloat(t) || 0)));
+
+        const pass1 = [parsed[0]];
+        for (let i = 1; i < parsed.length; i += 2) {
+          const op = parsed[i];
+          const nextVal = parsed[i + 1] !== undefined ? parsed[i + 1] : 0;
+          if (op === '*') {
+            pass1[pass1.length - 1] = pass1[pass1.length - 1] * nextVal;
+          } else if (op === '/') {
+            pass1[pass1.length - 1] = nextVal === 0 ? 0 : pass1[pass1.length - 1] / nextVal;
+          } else {
+            pass1.push(op, nextVal);
+          }
+        }
+
+        let result = pass1[0];
+        for (let i = 1; i < pass1.length; i += 2) {
+          const op = pass1[i];
+          const nextVal = pass1[i + 1] !== undefined ? pass1[i + 1] : 0;
+          if (op === '+') result += nextVal;
+          if (op === '-') result -= nextVal;
+        }
+        return isFinite(result) ? cleanExactNumber(result) : 0;
+      }
+
+      function formatExpressionString(tokens) {
+        if (!Array.isArray(tokens) || tokens.length === 0) return '';
+        const opSymbols = { '+': ' + ', '-': ' − ', '*': ' × ', '/': ' ÷ ' };
+        return tokens
+          .map((t) => {
+            if (opSymbols[t]) return opSymbols[t];
+            if (t === '-') return '−';
+            if (t === '-0') return '-0';
+            if (t.endsWith('.')) {
+              return formatInputDisplay(t.slice(0, -1)) + ',';
+            }
+            return formatInputDisplay(t);
+          })
+          .join('')
+          .trim();
+      }
+
+      function getRateValueForCalc(calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx] || state.calcs[0];
+        if (calc.activeRateType === 'custom') {
+          const custom = parseFloat(calc.customRate);
+          return custom > 0 ? custom : state.rates.bcv_usd;
+        }
+        const val = parseFloat(state.rates[calc.activeRateType]);
+        return val > 0 ? val : state.rates.bcv_usd;
+      }
+
+      function normalizeCalcState(rawCalc, defaultName) {
+        const base = createDefaultCalcState(defaultName);
+        const merged = Object.assign({}, base, rawCalc || {});
+        if (!['arith', 'foreign', 'ves'].includes(merged.inputMode)) {
+          merged.inputMode = 'arith';
+        }
+        if (!['foreign', 'ves'].includes(merged.conversionTarget)) {
+          merged.conversionTarget = 'ves';
+        }
+        merged.tokens = Array.isArray(merged.tokens) && merged.tokens.length ? merged.tokens : ['0'];
+        merged.arithOverwriteNext = Boolean(merged.arithOverwriteNext);
+        merged.history = Array.isArray(merged.history) ? merged.history : [];
+        merged.foreignAmount = typeof merged.foreignAmount === 'number' && isFinite(merged.foreignAmount) ? merged.foreignAmount : 0;
+        merged.vesAmount = typeof merged.vesAmount === 'number' && isFinite(merged.vesAmount) ? merged.vesAmount : 0;
+        merged.exactForeignValue = typeof merged.exactForeignValue === 'number' && isFinite(merged.exactForeignValue)
+          ? merged.exactForeignValue
+          : merged.foreignAmount;
+        merged.exactVesValue = typeof merged.exactVesValue === 'number' && isFinite(merged.exactVesValue)
+          ? merged.exactVesValue
+          : merged.vesAmount;
+        merged.currencyInputRaw = typeof merged.currencyInputRaw === 'string' && merged.currencyInputRaw.length ? merged.currencyInputRaw : '0';
+        merged.currencyOverwriteNext = Boolean(merged.currencyOverwriteNext);
+        return merged;
+      }
+
+      function getCalculatedAmounts(calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+        const rate = getRateValueForCalc(idx);
+        const safeRate = rate > 0 ? rate : (state.rates.bcv_usd > 0 ? state.rates.bcv_usd : 1);
+
+        if (calc.inputMode === 'foreign') {
+          if (calc.currencyOverwriteNext && !calc.currencyTypingStarted) {
+            return {
+              foreign: cleanExactNumber(typeof calc.exactForeignValue === 'number' ? calc.exactForeignValue : (calc.foreignAmount || 0)),
+              ves: cleanExactNumber(typeof calc.exactVesValue === 'number' ? calc.exactVesValue : (calc.vesAmount || 0)),
+              rate: safeRate
+            };
+          }
+          const rawForeign = parseFloat(calc.currencyInputRaw) || 0;
+          const foreign = cleanExactNumber(rawForeign);
+          const ves = cleanExactNumber(foreign * safeRate);
+          return { foreign, ves, rate: safeRate };
+        }
+
+        if (calc.inputMode === 'ves') {
+          if (calc.currencyOverwriteNext && !calc.currencyTypingStarted) {
+            return {
+              foreign: cleanExactNumber(typeof calc.exactForeignValue === 'number' ? calc.exactForeignValue : (calc.foreignAmount || 0)),
+              ves: cleanExactNumber(typeof calc.exactVesValue === 'number' ? calc.exactVesValue : (calc.vesAmount || 0)),
+              rate: safeRate
+            };
+          }
+          const rawVes = parseFloat(calc.currencyInputRaw) || 0;
+          const ves = cleanExactNumber(rawVes);
+          const foreign = cleanExactNumber(ves / safeRate);
+          return { foreign, ves, rate: safeRate };
+        }
+
+        return {
+          foreign: cleanExactNumber(typeof calc.exactForeignValue === 'number' ? calc.exactForeignValue : (calc.foreignAmount || 0)),
+          ves: cleanExactNumber(typeof calc.exactVesValue === 'number' ? calc.exactVesValue : (calc.vesAmount || 0)),
+          rate: safeRate
+        };
+      }
+
+      // =======================================================================
+      // 3. LOCALSTORAGE & LIVE RATES FETCH
+      // =======================================================================
+      function loadFromStorage() {
+        try {
+          const savedRates = JSON.parse(localStorage.getItem(STORAGE_KEYS.RATES) || 'null');
+          if (savedRates) state.rates = Object.assign({}, state.rates, savedRates);
+
+          // Las operaciones, montos y el historial son temporales:
+          // cada apertura comienza con ambas calculadoras limpias.
+          state.calcs = [
+            createDefaultCalcState('Cuenta 1'),
+            createDefaultCalcState('Cuenta 2')
+          ];
+          localStorage.removeItem(STORAGE_KEYS.CALCS);
+
+          const savedActiveCalc = parseInt(localStorage.getItem(STORAGE_KEYS.ACTIVE_CALC) || '0', 10);
+          if (savedActiveCalc === 0 || savedActiveCalc === 1) {
+            state.activeCalcIndex = savedActiveCalc;
+          }
+
+          const savedRateHist = JSON.parse(localStorage.getItem(STORAGE_KEYS.RATE_HISTORY) || 'null');
+          if (Array.isArray(savedRateHist)) state.rateHistory = savedRateHist;
+
+          const savedPM = JSON.parse(localStorage.getItem(STORAGE_KEYS.PAGOMOVIL) || 'null');
+          if (savedPM) state.pagoMovil = Object.assign({}, state.pagoMovil, savedPM);
+
+          const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
+          if (savedTheme === 'dark' || savedTheme === 'light') {
+            state.theme = savedTheme;
+          } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            state.theme = 'dark';
+          }
+        } catch (err) {
+          console.warn('Error leyendo localStorage:', err);
+        }
+      }
+
+      function saveToStorage() {
+        try {
+          localStorage.setItem(STORAGE_KEYS.RATES, JSON.stringify(state.rates));
+          // No persistir datos ingresados ni la selección de cuenta entre sesiones.
+          localStorage.removeItem(STORAGE_KEYS.CALCS);
+          localStorage.removeItem(STORAGE_KEYS.ACTIVE_CALC);
+          localStorage.setItem(STORAGE_KEYS.RATE_HISTORY, JSON.stringify(state.rateHistory));
+          localStorage.setItem(STORAGE_KEYS.PAGOMOVIL, JSON.stringify(state.pagoMovil));
+          localStorage.setItem(STORAGE_KEYS.THEME, state.theme);
+        } catch (err) {
+          console.warn('Error guardando en localStorage:', err);
+        }
+      }
+
+      function recordRateHistory(label, value) {
+        if (!value || value <= 0) return;
+        const now = new Date();
+        const timeStr = now.toLocaleDateString('es-VE', { day: '2-digit', month: 'short' }) + ' ' +
+          now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+
+        if (state.rateHistory.length > 0 &&
+            state.rateHistory[0].label === label &&
+            Math.abs(state.rateHistory[0].value - value) < 0.000001) {
+          return;
+        }
+
+        state.rateHistory.unshift({
+          id: Date.now(),
+          label,
+          value,
+          date: timeStr
+        });
+
+        if (state.rateHistory.length > 30) state.rateHistory.pop();
+        saveToStorage();
+      }
+
+      async function fetchBinanceP2PRate() {
+        // Primary: CriptoYa Binance P2P VES/USDT public JSON endpoint (CORS-friendly)
+        try {
+          const cyRes = await fetch('https://criptoya.com/api/binancep2p/USDT/VES/1', { cache: 'no-store' });
+          if (cyRes.ok) {
+            const cyData = await cyRes.json();
+            const ask = parseFloat(cyData.ask);
+            const bid = parseFloat(cyData.bid);
+            const totalAsk = parseFloat(cyData.totalAsk);
+            const totalBid = parseFloat(cyData.totalBid);
+            if (ask > 0 && bid > 0) return cleanExactNumber((ask + bid) / 2);
+            if (ask > 0) return cleanExactNumber(ask);
+            if (bid > 0) return cleanExactNumber(bid);
+            if (totalAsk > 0) return cleanExactNumber(totalAsk);
+            if (totalBid > 0) return cleanExactNumber(totalBid);
+          }
+        } catch (e) {
+          // Continue to fallback source
+        }
+
+        // Secondary: Yadio / DolarApi P2P/Paralelo reference
+        try {
+          const yRes = await fetch('https://api.yadio.io/exrates/VES', { cache: 'no-store' });
+          if (yRes.ok) {
+            const yData = await yRes.json();
+            const vesRate = parseFloat(yData?.VES?.USD || yData?.USD);
+            if (vesRate > 0) return cleanExactNumber(vesRate);
+          }
+        } catch (e) {
+          // Continue to tertiary source
+        }
+
+        const parRes = await fetch('https://ve.dolarapi.com/v1/dolares/paralelo', { cache: 'no-store' });
+        if (parRes.ok) {
+          const data = await parRes.json();
+          const val = parseFloat(data.promedio || data.venta || data.compra);
+          if (val > 0) return cleanExactNumber(val);
+        }
+        return 0;
+      }
+
+      async function fetchLiveRates(manualTrigger) {
+        const refreshIcon = document.getElementById('refresh-icon');
+        const statusBadge = document.getElementById('header-rate-status');
+        const dot = document.getElementById('rate-badge-dot');
+
+        if (refreshIcon) refreshIcon.classList.add('animate-spin');
+
+        try {
+          const [usdRes, binanceP2PRes, eurRes] = await Promise.allSettled([
+            fetch('https://ve.dolarapi.com/v1/dolares/oficial', { cache: 'no-store' }),
+            fetchBinanceP2PRate(),
+            fetch('https://ve.dolarapi.com/v1/euros/oficial', { cache: 'no-store' })
+          ]);
+
+          let updatedAny = false;
+
+          if (usdRes.status === 'fulfilled' && usdRes.value.ok) {
+            const data = await usdRes.value.json();
+            const val = parseFloat(data.promedio || data.venta || data.compra);
+            if (val > 0) {
+              state.rates.bcv_usd = val;
+              updatedAny = true;
+            }
+          }
+
+          if (binanceP2PRes.status === 'fulfilled' && binanceP2PRes.value > 0) {
+            state.rates.usdt = binanceP2PRes.value;
+            updatedAny = true;
+          }
+
+          if (eurRes.status === 'fulfilled' && eurRes.value.ok) {
+            const data = await eurRes.value.json();
+            const val = parseFloat(data.promedio || data.venta || data.compra);
+            if (val > 0) {
+              state.rates.bcv_eur = val;
+              updatedAny = true;
+            }
+          } else if (updatedAny) {
+            state.rates.bcv_eur = cleanExactNumber(state.rates.bcv_usd * 1.085);
+          }
+
+          if (updatedAny) {
+            state.rates.weekend = cleanExactNumber((state.rates.bcv_usd + state.rates.usdt) / 2);
+            state.rates.lastUpdated = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+            state.rates.isLive = true;
+
+            const activeCalc = getActiveCalc();
+            recordRateHistory(RATE_META[activeCalc.activeRateType].label, getRateValueForCalc());
+            saveToStorage();
+
+            if (statusBadge) {
+              statusBadge.textContent = 'En vivo';
+              statusBadge.className = 'text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium';
+            }
+            if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
+            if (manualTrigger) showToast('Tasas actualizadas');
+          } else {
+            throw new Error('Sin respuesta de APIs');
+          }
+        } catch (err) {
+          state.rates.isLive = false;
+          if (statusBadge) {
+            statusBadge.textContent = 'Guardada';
+            statusBadge.className = 'text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium';
+          }
+          if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0';
+          if (manualTrigger) showToast('Usando tasa guardada localmente');
+        } finally {
+          if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+          renderAll();
+        }
+      }
+
+      // =======================================================================
+      // 4. INPUT HANDLING ACROSS ARITHMETIC, FOREIGN CURRENCY & VES BOXES
+      // =======================================================================
+      function clearPairedCurrencyAmounts(calc) {
+        calc.foreignAmount = 0;
+        calc.vesAmount = 0;
+        calc.exactForeignValue = 0;
+        calc.exactVesValue = 0;
+        calc.currencyInputRaw = '0';
+        calc.currencyOverwriteNext = false;
+        calc.currencyTypingStarted = false;
+      }
+
+      function syncCurrencyFromRaw(calc, rate) {
+        const safeRate = rate > 0 ? rate : (state.rates.bcv_usd > 0 ? state.rates.bcv_usd : 1);
+        if (calc.inputMode === 'foreign') {
+          const val = cleanExactNumber(parseFloat(calc.currencyInputRaw) || 0);
+          calc.exactForeignValue = val;
+          calc.exactVesValue = cleanExactNumber(val * safeRate);
+          calc.foreignAmount = calc.exactForeignValue;
+          calc.vesAmount = calc.exactVesValue;
+        } else if (calc.inputMode === 'ves') {
+          const val = cleanExactNumber(parseFloat(calc.currencyInputRaw) || 0);
+          calc.exactVesValue = val;
+          calc.exactForeignValue = cleanExactNumber(val / safeRate);
+          calc.vesAmount = calc.exactVesValue;
+          calc.foreignAmount = calc.exactForeignValue;
+        }
+      }
+
+      function handleDigit(digit, calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+
+        if (calc.inputMode === 'foreign' || calc.inputMode === 'ves') {
+          if (calc.currencyOverwriteNext) {
+            calc.currencyInputRaw = digit === '00' ? '0' : digit;
+            calc.currencyOverwriteNext = false;
+            calc.currencyTypingStarted = true;
+            calc.tokens = [];
+            syncCurrencyFromRaw(calc, getRateValueForCalc(idx));
+            saveToStorage();
+            renderDisplay(idx);
+            return;
+          }
+
+          const cur = calc.currencyInputRaw || '0';
+          if (cur === '0') {
+            calc.currencyInputRaw = digit === '00' ? '0' : digit;
+          } else if (cur === '-0') {
+            calc.currencyInputRaw = digit === '00' ? '-0' : '-' + digit;
+          } else if (cur.replace(/[^0-9]/g, '').length < 16) {
+            calc.currencyInputRaw = cur + digit;
+          }
+          calc.currencyTypingStarted = true;
+          calc.tokens = [];
+          syncCurrencyFromRaw(calc, getRateValueForCalc(idx));
+          saveToStorage();
+          renderDisplay(idx);
+          return;
+        }
+
+        // Arithmetic mode: wipe any prior Bs and foreign currency amounts while typing
+        clearPairedCurrencyAmounts(calc);
+
+        if (calc.arithOverwriteNext) {
+          calc.tokens = [digit === '00' ? '0' : digit];
+          calc.arithOverwriteNext = false;
+          saveToStorage();
+          renderDisplay(idx);
+          return;
+        }
+
+        const last = calc.tokens[calc.tokens.length - 1];
+        if (!last || ['+', '-', '*', '/'].includes(last)) {
+          calc.tokens.push(digit === '00' ? '0' : digit);
+        } else if (last === '0') {
+          calc.tokens[calc.tokens.length - 1] = digit === '00' ? '0' : digit;
+        } else if (last === '-0') {
+          calc.tokens[calc.tokens.length - 1] = digit === '00' ? '-0' : '-' + digit;
+        } else if (last.replace(/[^0-9]/g, '').length < 16) {
+          calc.tokens[calc.tokens.length - 1] = last + digit;
+        }
+
+        saveToStorage();
+        renderDisplay(idx);
+      }
+
+      function handleDecimal(calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+
+        if (calc.inputMode === 'foreign' || calc.inputMode === 'ves') {
+          if (calc.currencyOverwriteNext) {
+            calc.currencyInputRaw = '0.';
+            calc.currencyOverwriteNext = false;
+            calc.currencyTypingStarted = true;
+            calc.tokens = [];
+            syncCurrencyFromRaw(calc, getRateValueForCalc(idx));
+            saveToStorage();
+            renderDisplay(idx);
+            return;
+          }
+
+          const cur = calc.currencyInputRaw || '0';
+          if (!cur.includes('.')) {
+            calc.currencyInputRaw = cur + '.';
+          }
+          calc.currencyTypingStarted = true;
+          calc.tokens = [];
+          syncCurrencyFromRaw(calc, getRateValueForCalc(idx));
+          saveToStorage();
+          renderDisplay(idx);
+          return;
+        }
+
+        // Arithmetic mode: wipe any prior Bs and foreign currency amounts while typing
+        clearPairedCurrencyAmounts(calc);
+
+        if (calc.arithOverwriteNext) {
+          calc.tokens = ['0.'];
+          calc.arithOverwriteNext = false;
+          saveToStorage();
+          renderDisplay(idx);
+          return;
+        }
+
+        const last = calc.tokens[calc.tokens.length - 1];
+        if (!last || ['+', '-', '*', '/'].includes(last)) {
+          calc.tokens.push('0.');
+        } else if (!last.includes('.')) {
+          calc.tokens[calc.tokens.length - 1] = last + '.';
+        }
+
+        saveToStorage();
+        renderDisplay(idx);
+      }
+
+      function handleOperator(op, calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+
+        if (calc.inputMode !== 'arith') {
+          const currentVal = parseFloat(calc.currencyInputRaw) || 0;
+          calc.inputMode = 'arith';
+          clearPairedCurrencyAmounts(calc);
+          calc.arithOverwriteNext = false;
+          calc.tokens = [String(cleanExactNumber(currentVal)), op];
+          saveToStorage();
+          renderDisplay(idx);
+          return;
+        }
+
+        // Adding an operator in arithmetic mode clears existing Bs and foreign currency amounts
+        clearPairedCurrencyAmounts(calc);
+        calc.arithOverwriteNext = false;
+        const last = calc.tokens[calc.tokens.length - 1];
+        if (!last) {
+          calc.tokens = ['0', op];
+        } else if (['+', '-', '*', '/'].includes(last)) {
+          calc.tokens[calc.tokens.length - 1] = op;
+        } else {
+          if (last.endsWith('.')) {
+            calc.tokens[calc.tokens.length - 1] = last.slice(0, -1);
+          }
+          if (last === '-') {
+            calc.tokens[calc.tokens.length - 1] = '0';
+          }
+          calc.tokens.push(op);
+        }
+
+        saveToStorage();
+        renderDisplay(idx);
+      }
+
+      function handleToggleSign(calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+
+        if (calc.inputMode === 'foreign' || calc.inputMode === 'ves') {
+          calc.currencyOverwriteNext = false;
+          const cur = calc.currencyInputRaw || '0';
+          if (cur.startsWith('-')) {
+            const stripped = cur.slice(1);
+            calc.currencyInputRaw = stripped === '' ? '0' : stripped;
+          } else {
+            calc.currencyInputRaw = '-' + cur;
+          }
+          calc.tokens = [];
+          syncCurrencyFromRaw(calc, getRateValueForCalc(idx));
+          saveToStorage();
+          renderDisplay(idx);
+          return;
+        }
+
+        clearPairedCurrencyAmounts(calc);
+        calc.arithOverwriteNext = false;
+        const last = calc.tokens[calc.tokens.length - 1];
+        if (!last || ['+', '-', '*', '/'].includes(last)) {
+          calc.tokens.push('-0');
+        } else if (last.startsWith('-')) {
+          const stripped = last.slice(1);
+          calc.tokens[calc.tokens.length - 1] = stripped === '' ? '0' : stripped;
+        } else {
+          calc.tokens[calc.tokens.length - 1] = '-' + last;
+        }
+
+        saveToStorage();
+        renderDisplay(idx);
+      }
+
+      function handlePercent(calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+
+        if (calc.inputMode === 'foreign' || calc.inputMode === 'ves') {
+          calc.currencyOverwriteNext = false;
+          const num = parseFloat(calc.currencyInputRaw) || 0;
+          calc.currencyInputRaw = String(cleanExactNumber(num / 100));
+          calc.tokens = [];
+          syncCurrencyFromRaw(calc, getRateValueForCalc(idx));
+          saveToStorage();
+          renderDisplay(idx);
+          return;
+        }
+
+        clearPairedCurrencyAmounts(calc);
+        calc.arithOverwriteNext = false;
+        const last = calc.tokens[calc.tokens.length - 1];
+        if (!last || ['+', '-', '*', '/'].includes(last)) return;
+
+        const num = parseFloat(last) || 0;
+        if (calc.tokens.length >= 3) {
+          const opPrev = calc.tokens[calc.tokens.length - 2];
+          const baseVal = evaluateTokens(calc.tokens.slice(0, -2));
+          const pctVal = (opPrev === '+' || opPrev === '-') ? (baseVal * num) / 100 : num / 100;
+          calc.tokens[calc.tokens.length - 1] = String(cleanExactNumber(pctVal));
+        } else {
+          calc.tokens[calc.tokens.length - 1] = String(cleanExactNumber(num / 100));
+        }
+
+        saveToStorage();
+        renderDisplay(idx);
+      }
+
+      function handleBackspace(calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+
+        if (calc.inputMode === 'foreign' || calc.inputMode === 'ves') {
+          calc.currencyOverwriteNext = false;
+          calc.currencyTypingStarted = true;
+          const cur = calc.currencyInputRaw || '0';
+          if (cur.length > 1 && !(cur.length === 2 && cur.startsWith('-'))) {
+            calc.currencyInputRaw = cur.slice(0, -1);
+          } else {
+            calc.currencyInputRaw = '0';
+          }
+          calc.tokens = [];
+          syncCurrencyFromRaw(calc, getRateValueForCalc(idx));
+          saveToStorage();
+          renderDisplay(idx);
+          return;
+        }
+
+        clearPairedCurrencyAmounts(calc);
+        calc.arithOverwriteNext = false;
+        const last = calc.tokens[calc.tokens.length - 1];
+        if (['+', '-', '*', '/'].includes(last)) {
+          calc.tokens.pop();
+        } else if (last && last.length > 1 && !(last.length === 2 && last.startsWith('-'))) {
+          calc.tokens[calc.tokens.length - 1] = last.slice(0, -1);
+        } else if (calc.tokens.length > 1) {
+          calc.tokens.pop();
+        } else {
+          calc.tokens = ['0'];
+        }
+
+        saveToStorage();
+        renderDisplay(idx);
+      }
+
+      function handleClear(calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+
+        clearPairedCurrencyAmounts(calc);
+        if (calc.inputMode === 'foreign' || calc.inputMode === 'ves') {
+          calc.tokens = [];
+        } else {
+          calc.tokens = ['0'];
+          calc.arithOverwriteNext = false;
+        }
+
+        saveToStorage();
+        renderDisplay(idx);
+      }
+
+      function handleEquals(saveToHist, calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+        const rate = getRateValueForCalc(idx);
+
+        if (calc.inputMode === 'foreign' || calc.inputMode === 'ves') {
+          const rawVal = cleanExactNumber(parseFloat(calc.currencyInputRaw) || 0);
+          calc.currencyInputRaw = String(rawVal);
+          calc.currencyOverwriteNext = true;
+          calc.currencyTypingStarted = false;
+          calc.tokens = [];
+          syncCurrencyFromRaw(calc, rate);
+          if (saveToHist && (Math.abs(calc.exactForeignValue) > 0 || Math.abs(calc.exactVesValue) > 0)) {
+            addCurrentToHistory('', idx);
+          }
+          saveToStorage();
+          renderDisplay(idx);
+          return;
+        }
+
+        const exprString = formatExpressionString(calc.tokens);
+        const result = evaluateTokens(calc.tokens);
+        const exactResult = cleanExactNumber(result);
+        const safeRate = rate > 0 ? rate : (state.rates.bcv_usd > 0 ? state.rates.bcv_usd : 1);
+
+        // Arithmetic operations always represent Bolívares (without symbol in the arithmetic box)
+        // and display their equivalent in $ (foreign currency) alongside Bs when pressing '='
+        calc.exactVesValue = exactResult;
+        calc.exactForeignValue = cleanExactNumber(exactResult / safeRate);
+        calc.vesAmount = calc.exactVesValue;
+        calc.foreignAmount = calc.exactForeignValue;
+
+        if (saveToHist && Math.abs(exactResult) > 0 && calc.tokens.length > 1) {
+          addCurrentToHistory(exprString, idx);
+        }
+
+        calc.tokens = [String(exactResult)];
+        calc.arithOverwriteNext = true;
+        saveToStorage();
+        renderDisplay(idx);
+      }
+
+      function setInputMode(newMode, calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+        if (!['arith', 'foreign', 'ves'].includes(newMode)) return;
+
+        const previousMode = calc.inputMode;
+        calc.inputMode = newMode;
+
+        if (newMode === 'arith') {
+          calc.tokens = ['0'];
+          calc.arithOverwriteNext = false;
+          calc.currencyOverwriteNext = false;
+          calc.currencyTypingStarted = false;
+        } else if (newMode === 'foreign') {
+          calc.conversionTarget = 'foreign';
+          calc.tokens = [];
+          calc.arithOverwriteNext = false;
+          // Preserve existing paired values on select, but overwrite cleanly on first digit/decimal
+          const currentForeign = cleanExactNumber(typeof calc.exactForeignValue === 'number' ? calc.exactForeignValue : (calc.foreignAmount || 0));
+          const currentVes = cleanExactNumber(typeof calc.exactVesValue === 'number' ? calc.exactVesValue : (calc.vesAmount || 0));
+          calc.foreignAmount = currentForeign;
+          calc.vesAmount = currentVes;
+          calc.currencyInputRaw = currentForeign ? String(currentForeign) : '0';
+          calc.currencyOverwriteNext = Math.abs(currentForeign) > 0 || Math.abs(currentVes) > 0;
+          calc.currencyTypingStarted = false;
+          if (!calc.currencyOverwriteNext) {
+            syncCurrencyFromRaw(calc, getRateValueForCalc(idx));
+          }
+        } else if (newMode === 'ves') {
+          calc.conversionTarget = 'ves';
+          calc.tokens = [];
+          calc.arithOverwriteNext = false;
+          // Preserve existing paired values on select, but overwrite cleanly on first digit/decimal
+          const currentVes = cleanExactNumber(typeof calc.exactVesValue === 'number' ? calc.exactVesValue : (calc.vesAmount || 0));
+          const currentForeign = cleanExactNumber(typeof calc.exactForeignValue === 'number' ? calc.exactForeignValue : (calc.foreignAmount || 0));
+          calc.vesAmount = currentVes;
+          calc.foreignAmount = currentForeign;
+          calc.currencyInputRaw = currentVes ? String(currentVes) : '0';
+          calc.currencyOverwriteNext = Math.abs(currentVes) > 0 || Math.abs(currentForeign) > 0;
+          calc.currencyTypingStarted = false;
+          if (!calc.currencyOverwriteNext) {
+            syncCurrencyFromRaw(calc, getRateValueForCalc(idx));
+          }
+        }
+
+        saveToStorage();
+        renderDisplay(idx);
+      }
+
+      // =======================================================================
+      // 5. PER-ACCOUNT HISTORY, PNG RECEIPTS, PAGO MÓVIL & QR
+      // =======================================================================
+      function addCurrentToHistory(customExpr, calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+        const { foreign, ves, rate } = getCalculatedAmounts(idx);
+        if (Math.abs(foreign) <= 0 && Math.abs(ves) <= 0) {
+          showToast('Ingresa un monto mayor a 0');
+          return;
+        }
+
+        const meta = RATE_META[calc.activeRateType];
+        const time = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+
+        calc.history.unshift({
+          id: Date.now() + Math.random(),
+          expression: customExpr || (calc.inputMode === 'foreign' ? `${meta.symbol} ${formatCurrencyExactDisplay(foreign)}` : `${formatCurrencyExactDisplay(ves)} Bs`),
+          foreign,
+          ves,
+          rate,
+          rateLabel: meta.label,
+          symbol: meta.symbol,
+          time
+        });
+
+        saveToStorage();
+        renderHistoryBadge();
+        showToast(`Guardado en ${calc.name}`);
+      }
+
+      function deleteHistoryItem(id) {
+        const calc = getActiveCalc();
+        calc.history = calc.history.filter((item) => item.id !== id);
+        saveToStorage();
+        renderHistoryModal();
+        renderHistoryBadge();
+      }
+
+      function clearAllHistory() {
+        const calc = getActiveCalc();
+        calc.history = [];
+        saveToStorage();
+        renderHistoryModal();
+        renderHistoryBadge();
+        showToast(`Historial de ${calc.name} borrado`);
+      }
+
+      function exportHistoryWhatsApp() {
+        const calc = getActiveCalc();
+        if (calc.history.length === 0) {
+          showToast('El historial está vacío');
+          return;
+        }
+
+        let totalForeign = 0;
+        let totalVes = 0;
+        const lines = [`*Resumen ${calc.name} — Monto App*`, ''];
+
+        calc.history.slice().reverse().forEach((item, idx) => {
+          totalForeign += item.foreign;
+          totalVes += item.ves;
+          lines.push(`${idx + 1}. ${item.symbol} ${formatCurrencyExactDisplay(item.foreign)} → *${formatCurrencyExactDisplay(item.ves)} Bs* (${item.rateLabel})`);
+        });
+
+        lines.push('');
+        lines.push(`*Total Divisas:* $${formatCurrencyExactDisplay(totalForeign)}`);
+        lines.push(`*Total Bolívares:* ${formatCurrencyExactDisplay(totalVes)} Bs`);
+
+        window.open(`https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener,noreferrer');
+      }
+
+      function roundRect(ctx, x, y, w, h, r, fill) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+        if (fill) ctx.fill();
+      }
+
+      function generateReceiptImage(isHistorySummary, calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const width = 720;
+        const height = isHistorySummary ? 860 : 620;
+        canvas.width = width;
+        canvas.height = height;
+
+        const isDark = state.theme === 'dark';
+        const accentColor = idx === 0 ? '#4f46e5' : '#0d9488';
+        const accentDark = idx === 0 ? '#3730a3' : '#115e59';
+
+        ctx.fillStyle = isDark ? '#18181b' : '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+
+        const grad = ctx.createLinearGradient(0, 0, width, 140);
+        grad.addColorStop(0, accentColor);
+        grad.addColorStop(1, accentDark);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, width, 140);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '800 34px Inter, sans-serif';
+        ctx.fillText(`Monto · ${calc.name}`, 48, 72);
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '500 20px Inter, sans-serif';
+        ctx.fillText('Calculadora de Divisas · Venezuela', 48, 106);
+
+        const nowStr = new Date().toLocaleDateString('es-VE', {
+          day: '2-digit', month: 'short', year: 'numeric'
+        }) + ' · ' + new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#f1f5f9';
+        ctx.font = '600 18px Inter, sans-serif';
+        ctx.fillText(nowStr, width - 48, 72);
+        ctx.textAlign = 'left';
+
+        if (!isHistorySummary) {
+          const { foreign, ves, rate } = getCalculatedAmounts(idx);
+          const meta = RATE_META[calc.activeRateType];
+
+          ctx.fillStyle = isDark ? '#27272a' : '#f8fafc';
+          roundRect(ctx, 48, 180, width - 96, 135, 24, true);
+
+          ctx.fillStyle = isDark ? '#a1a1aa' : '#64748b';
+          ctx.font = '700 18px Inter, sans-serif';
+          ctx.fillText(`MONTO EN ${meta.short}`, 76, 222);
+
+          ctx.fillStyle = isDark ? '#ffffff' : '#0f172a';
+          ctx.font = '800 44px Inter, sans-serif';
+          ctx.fillText(`${meta.symbol} ${formatCurrencyExactDisplay(foreign)}`, 76, 285);
+
+          ctx.fillStyle = isDark ? (idx === 0 ? '#312e81' : '#134e4a') : (idx === 0 ? '#eef2ff' : '#f0fdfa');
+          roundRect(ctx, 48, 340, width - 96, 145, 24, true);
+
+          ctx.fillStyle = isDark ? '#cbd5e1' : accentColor;
+          ctx.font = '700 18px Inter, sans-serif';
+          ctx.fillText('TOTAL EN BOLÍVARES', 76, 382);
+
+          ctx.fillStyle = isDark ? '#ffffff' : accentDark;
+          ctx.font = '800 44px Inter, sans-serif';
+          ctx.fillText(`${formatCurrencyExactDisplay(ves)} Bs`, 76, 448);
+
+          ctx.fillStyle = isDark ? '#a1a1aa' : '#64748b';
+          ctx.font = '600 20px Inter, sans-serif';
+          ctx.fillText(`Tasa aplicada (${meta.label}): ${formatExactVE(rate, 2, 8)} Bs`, 48, 545);
+        } else {
+          let totalF = 0;
+          let totalV = 0;
+          calc.history.forEach((i) => {
+            totalF += i.foreign;
+            totalV += i.ves;
+          });
+
+          ctx.fillStyle = isDark ? '#27272a' : '#f1f5f9';
+          roundRect(ctx, 48, 175, width - 96, 130, 24, true);
+
+          ctx.fillStyle = isDark ? '#a1a1aa' : '#64748b';
+          ctx.font = '700 18px Inter, sans-serif';
+          ctx.fillText(`RESUMEN ${calc.name.toUpperCase()} (${calc.history.length} OPERACIONES)`, 76, 215);
+
+          ctx.fillStyle = isDark ? '#ffffff' : '#0f172a';
+          ctx.font = '800 32px Inter, sans-serif';
+          ctx.fillText(`$${formatCurrencyExactDisplay(totalF)}  =  ${formatCurrencyExactDisplay(totalV)} Bs`, 76, 272);
+
+          let y = 350;
+          const maxItems = Math.min(calc.history.length, 7);
+          for (let i = 0; i < maxItems; i++) {
+            const item = calc.history[i];
+            ctx.fillStyle = isDark ? '#e4e4e7' : '#1e293b';
+            ctx.font = '600 22px Inter, sans-serif';
+            ctx.fillText(`${i + 1}. ${item.symbol} ${formatCurrencyExactDisplay(item.foreign)}`, 56, y);
+
+            ctx.textAlign = 'right';
+            ctx.fillStyle = accentColor;
+            ctx.font = '700 22px Inter, sans-serif';
+            ctx.fillText(`${formatCurrencyExactDisplay(item.ves)} Bs`, width - 56, y);
+            ctx.textAlign = 'left';
+
+            y += 56;
+          }
+        }
+
+        const imgEl = document.getElementById('receipt-preview-img');
+        if (imgEl) imgEl.src = canvas.toDataURL('image/png');
+        openModal('modal-receipt');
+      }
+
+      function drawAppQR() {
+        const canvas = document.getElementById('qr-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const size = 180;
+        const modules = 21;
+        const cell = size / modules;
+        const url = window.location.href || 'https://montoapp.net';
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = '#0f172a';
+
+        const drawFinder = (ox, oy) => {
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(ox * cell, oy * cell, 7 * cell, 7 * cell);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect((ox + 1) * cell, (oy + 1) * cell, 5 * cell, 5 * cell);
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect((ox + 2) * cell, (oy + 2) * cell, 3 * cell, 3 * cell);
+        };
+
+        drawFinder(0, 0);
+        drawFinder(modules - 7, 0);
+        drawFinder(0, modules - 7);
+
+        let hash = 0;
+        for (let i = 0; i < url.length; i++) {
+          hash = ((hash << 5) - hash) + url.charCodeAt(i);
+          hash |= 0;
+        }
+
+        for (let r = 0; r < modules; r++) {
+          for (let c = 0; c < modules; c++) {
+            const inFinder = (r < 8 && c < 8) || (r < 8 && c >= modules - 8) || (r >= modules - 8 && c < 8);
+            if (!inFinder) {
+              const bit = Math.abs(Math.sin(hash + r * 31 + c * 17)) > 0.48;
+              if (bit) {
+                ctx.fillRect(c * cell, r * cell, cell - 0.5, cell - 0.5);
+              }
+            }
+          }
+        }
+      }
+
+      function showToast(msg) {
+        const toast = document.getElementById('toast');
+        const msgEl = document.getElementById('toast-message');
+        if (!toast || !msgEl) return;
+
+        msgEl.textContent = msg;
+        toast.classList.remove('opacity-0', 'translate-y-2');
+        toast.classList.add('opacity-100', 'translate-y-0');
+
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.classList.add('opacity-0', 'translate-y-2');
+          toast.classList.remove('opacity-100', 'translate-y-0');
+        }, 2200);
+      }
+
+      function copyTextToClipboard(text, successMsg) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          showToast(successMsg || 'Copiado al portapapeles');
+        } catch (err) {
+          showToast('No se pudo copiar');
+        }
+        document.body.removeChild(textarea);
+      }
+
+      // =======================================================================
+      // 6. UI RENDERING & MODALS
+      // =======================================================================
+      function renderHeader() {
+        const calc = getActiveCalc();
+        const meta = RATE_META[calc.activeRateType];
+        const rateVal = getRateValueForCalc();
+
+        document.getElementById('header-rate-label').textContent = `${meta.label} (${calc.name})`;
+        document.getElementById('header-rate-value').textContent = `${formatExactVE(rateVal, 2, 8)} Bs`;
+      }
+
+      function renderSwitcherUI() {
+        const idx = state.activeCalcIndex;
+        document.querySelectorAll('.calc-tab-btn').forEach((btn) => {
+          const btnIdx = parseInt(btn.getAttribute('data-switch-calc'), 10);
+          if (btnIdx === idx) {
+            btn.className = idx === 0
+              ? 'calc-tab-btn px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-300 shadow-2xs'
+              : 'calc-tab-btn px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-white dark:bg-zinc-700 text-teal-600 dark:text-teal-300 shadow-2xs';
+          } else {
+            btn.className = 'calc-tab-btn px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200';
+          }
+        });
+
+        const hintText = document.getElementById('swipe-hint-text');
+        const hintIcon = document.getElementById('swipe-hint-icon');
+        if (hintText && hintIcon) {
+          if (idx === 0) {
+            hintText.textContent = 'Desliza ↓ Cuenta 2';
+            hintIcon.style.transform = 'rotate(0deg)';
+          } else {
+            hintText.textContent = 'Desliza ↑ Cuenta 1';
+            hintIcon.style.transform = 'rotate(180deg)';
+          }
+        }
+      }
+
+      function renderDisplay(calcIndex) {
+        const idx = typeof calcIndex === 'number' ? calcIndex : state.activeCalcIndex;
+        const calc = state.calcs[idx];
+        const { foreign, ves } = getCalculatedAmounts(idx);
+        const meta = RATE_META[calc.activeRateType];
+
+        const isC1 = idx === 0;
+        const activeBoxStyle = isC1
+          ? 'border-indigo-500/80 bg-indigo-50/40 dark:bg-indigo-950/25 dark:border-indigo-500/70'
+          : 'border-teal-500/80 bg-teal-50/40 dark:bg-teal-950/25 dark:border-teal-500/70';
+        const inactiveBoxStyle = 'border-transparent bg-slate-100/80 dark:bg-zinc-800/70 hover:bg-slate-100 dark:hover:bg-zinc-800';
+        const activeTagBg = isC1 ? 'bg-indigo-600 text-white' : 'bg-teal-600 text-white';
+        const inactiveTagBg = 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300';
+
+        const arithPanel = document.getElementById(`arith-panel-${idx}`);
+        const arithHint = document.getElementById(`arith-active-hint-${idx}`);
+        const arithResultEl = document.getElementById(`arith-result-${idx}`);
+        const exprEl = document.getElementById(`expression-preview-${idx}`);
+
+        const foreignCard = document.getElementById(`card-foreign-${idx}`);
+        const vesCard = document.getElementById(`card-ves-${idx}`);
+        const foreignTag = document.getElementById(`foreign-tag-${idx}`);
+        const vesTag = document.getElementById(`ves-tag-${idx}`);
+        const foreignHint = document.getElementById(`foreign-active-hint-${idx}`);
+        const vesHint = document.getElementById(`ves-active-hint-${idx}`);
+        const foreignAmountEl = document.getElementById(`foreign-amount-${idx}`);
+        const vesAmountEl = document.getElementById(`ves-amount-${idx}`);
+
+        document.getElementById(`foreign-symbol-${idx}`).textContent = meta.symbol === 'USDT' ? '' : meta.symbol;
+        foreignTag.textContent = meta.symbol === 'USDT' ? 'USDT' : `${meta.short} (${meta.symbol})`;
+
+        arithPanel.className = `rounded-3xl px-4 py-2.5 transition-all duration-200 cursor-pointer border-2 shadow-2xs ${calc.inputMode === 'arith' ? activeBoxStyle : inactiveBoxStyle}`;
+        foreignCard.className = `group relative rounded-3xl p-3.5 transition-all duration-200 cursor-pointer border-2 ${calc.inputMode === 'foreign' ? activeBoxStyle : inactiveBoxStyle}`;
+        vesCard.className = `group relative rounded-3xl p-3.5 transition-all duration-200 cursor-pointer border-2 ${calc.inputMode === 'ves' ? activeBoxStyle : inactiveBoxStyle}`;
+
+        arithHint.classList.toggle('hidden', calc.inputMode !== 'arith');
+        foreignHint.classList.toggle('hidden', calc.inputMode !== 'foreign');
+        vesHint.classList.toggle('hidden', calc.inputMode !== 'ves');
+
+        foreignTag.className = `text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg ${calc.inputMode === 'foreign' ? activeTagBg : inactiveTagBg}`;
+        vesTag.className = `text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg ${calc.inputMode === 'ves' ? activeTagBg : inactiveTagBg}`;
+
+        if (calc.inputMode === 'arith') {
+          const exprStr = formatExpressionString(calc.tokens);
+          const liveEval = evaluateTokens(calc.tokens);
+          exprEl.textContent = exprStr;
+          arithResultEl.textContent = `= ${formatExactVE(liveEval, 0, 8)}`;
+
+          foreignAmountEl.textContent = formatCurrencyExactDisplay(foreign);
+          foreignAmountEl.className = 'text-3xl sm:text-[38px] font-extrabold tracking-tight text-slate-900 dark:text-white tabular-nums truncate leading-none';
+
+          vesAmountEl.textContent = formatCurrencyExactDisplay(ves);
+          vesAmountEl.className = 'text-3xl sm:text-4xl font-bold tracking-tight text-slate-700 dark:text-zinc-200 tabular-nums truncate leading-none';
+        } else if (calc.inputMode === 'foreign') {
+          exprEl.textContent = '';
+          arithResultEl.textContent = '';
+
+          foreignAmountEl.textContent = (calc.currencyOverwriteNext && !calc.currencyTypingStarted)
+            ? formatCurrencyExactDisplay(foreign)
+            : formatInputDisplay(calc.currencyInputRaw);
+          foreignAmountEl.className = 'text-3xl sm:text-[38px] font-extrabold tracking-tight text-slate-900 dark:text-white tabular-nums truncate leading-none';
+
+          vesAmountEl.textContent = formatCurrencyExactDisplay(ves);
+          vesAmountEl.className = 'text-3xl sm:text-4xl font-bold tracking-tight text-slate-700 dark:text-zinc-200 tabular-nums truncate leading-none';
+        } else {
+          exprEl.textContent = '';
+          arithResultEl.textContent = '';
+
+          vesAmountEl.textContent = (calc.currencyOverwriteNext && !calc.currencyTypingStarted)
+            ? formatCurrencyExactDisplay(ves)
+            : formatInputDisplay(calc.currencyInputRaw);
+          vesAmountEl.className = 'text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums truncate leading-none';
+
+          foreignAmountEl.textContent = formatCurrencyExactDisplay(foreign);
+          foreignAmountEl.className = 'text-3xl sm:text-[38px] font-extrabold tracking-tight text-slate-700 dark:text-zinc-200 tabular-nums truncate leading-none';
+        }
+      }
+
+      function renderRatesModal() {
+        const calc = getActiveCalc();
+        document.getElementById('rates-modal-account-badge').textContent = calc.name;
+        document.getElementById('rate-val-bcv_usd').textContent = `${formatExactVE(state.rates.bcv_usd, 2, 8)} Bs`;
+        document.getElementById('rate-val-bcv_eur').textContent = `${formatExactVE(state.rates.bcv_eur, 2, 8)} Bs`;
+        document.getElementById('rate-val-usdt').textContent = `${formatExactVE(state.rates.usdt, 2, 8)} Bs`;
+        document.getElementById('rate-val-weekend').textContent = `${formatExactVE(state.rates.weekend, 2, 8)} Bs`;
+        document.getElementById('input-custom-rate').value = calc.customRate || '';
+
+        document.getElementById('rates-last-updated').textContent = state.rates.lastUpdated
+          ? `Última sincronización: ${state.rates.lastUpdated}`
+          : 'Usando valores guardados localmente';
+
+        document.querySelectorAll('.rate-option').forEach((btn) => {
+          const type = btn.getAttribute('data-select-rate');
+          const check = btn.querySelector('.rate-check');
+          if (type === calc.activeRateType) {
+            btn.classList.add('border-indigo-500', 'bg-indigo-50/50', 'dark:bg-indigo-950/20');
+            btn.classList.remove('border-slate-200/80', 'dark:border-zinc-800');
+            if (check) check.classList.remove('hidden');
+          } else {
+            btn.classList.remove('border-indigo-500', 'bg-indigo-50/50', 'dark:bg-indigo-950/20');
+            btn.classList.add('border-slate-200/80', 'dark:border-zinc-800');
+            if (check) check.classList.add('hidden');
+          }
+        });
+
+        const customBadge = document.getElementById('custom-rate-active-badge');
+        if (customBadge) {
+          customBadge.classList.toggle('hidden', calc.activeRateType !== 'custom');
+        }
+      }
+
+      function renderHistoryBadge() {
+        const calc = getActiveCalc();
+        const badge = document.getElementById('history-badge');
+        const menuCount = document.getElementById('menu-history-count');
+        const count = calc.history.length;
+
+        if (menuCount) menuCount.textContent = `${calc.name}: ${count}`;
+        if (badge) {
+          badge.textContent = String(count);
+          badge.classList.toggle('hidden', count === 0);
+        }
+      }
+
+      function renderHistoryModal() {
+        const calc = getActiveCalc();
+        document.getElementById('history-modal-account-badge').textContent = calc.name;
+        const listEl = document.getElementById('history-list');
+        let totalForeign = 0;
+        let totalVes = 0;
+
+        calc.history.forEach((item) => {
+          totalForeign += item.foreign;
+          totalVes += item.ves;
+        });
+
+        document.getElementById('history-total-foreign').textContent = `$${formatCurrencyExactDisplay(totalForeign)}`;
+        document.getElementById('history-total-ves').textContent = `${formatCurrencyExactDisplay(totalVes)} Bs`;
+
+        if (calc.history.length === 0) {
+          listEl.innerHTML = `
+            <div class="h-full flex flex-col items-center justify-center text-center py-10 text-slate-400 dark:text-zinc-500">
+              <p class="text-sm font-semibold">No hay operaciones en ${calc.name}</p>
+              <p class="text-xs mt-1">Presiona "=" o "Sumar" para acumular montos en esta cuenta.</p>
+            </div>
+          `;
+          return;
+        }
+
+        listEl.innerHTML = calc.history.map((item, i) => `
+          <div class="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800/70 border border-slate-200/60 dark:border-zinc-700/60 flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-extrabold text-sm text-slate-900 dark:text-white tabular-nums">${item.symbol} ${formatCurrencyExactDisplay(item.foreign)}</span>
+          <button type="button" data-select-rate="usdt" class="rate-option w-full p-3.5 rounded-2xl border-2 text-left flex items-center justify-between transition-all">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold flex items-center justify-center text-xs">USDT</div>
+              <div>
+                <div class="font-bold text-sm text-slate-900 dark:text-white">USDT · Binance P2P</div>
+                <div class="text-xs text-slate-500 dark:text-zinc-400">Referencia comercio P2P USDT/VES</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div id="rate-val-usdt" class="font-extrabold text-base tabular-nums text-slate-900 dark:text-white">-- Bs</div>
+              <span class="rate-check text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hidden">Activa</span>
+            </div>
+          </button>
+          </div>
+        `).join('');
+
+        listEl.querySelectorAll('[data-delete-hist-index]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const idxToRemove = parseInt(btn.getAttribute('data-delete-hist-index'), 10);
+            const target = calc.history[idxToRemove];
+            if (target) deleteHistoryItem(target.id);
+          });
+        });
+      }
+
+      function renderRateHistoryModal() {
+        const listEl = document.getElementById('rate-history-list');
+        if (state.rateHistory.length === 0) {
+          listEl.innerHTML = '<p class="text-center text-xs text-slate-400 py-8">No hay registros de tasas anteriores.</p>';
+          return;
+        }
+
+        listEl.innerHTML = state.rateHistory.map((item) => `
+          <div class="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800/70 flex items-center justify-between">
+            <div>
+              <div class="text-sm font-bold text-slate-900 dark:text-white">${item.label}</div>
+              <div class="text-xs text-slate-500 dark:text-zinc-400">${item.date}</div>
+            </div>
+            <div class="font-extrabold text-sm text-indigo-600 dark:text-indigo-400 tabular-nums">
+              ${formatExactVE(item.value, 2, 8)} Bs
+            </div>
+          </div>
+        `).join('');
+      }
+
+      function applyTheme() {
+        const html = document.documentElement;
+        const label = document.getElementById('theme-status-label');
+        if (state.theme === 'dark') {
+          html.classList.add('dark');
+          if (label) label.textContent = 'Modo Oscuro activo';
+        } else {
+          html.classList.remove('dark');
+          if (label) label.textContent = 'Modo Claro activo';
+        }
+      }
+
+      function renderAll() {
+        applyTheme();
+        const track = document.getElementById('calc-track');
+        if (track) {
+          track.style.transform = `translateY(-${state.activeCalcIndex * 50}%)`;
+        }
+        renderHeader();
+        renderSwitcherUI();
+        renderDisplay(0);
+        renderDisplay(1);
+        renderRatesModal();
+        renderHistoryBadge();
+      }
+
+      function openModal(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.remove('hidden');
+
+        if (id === 'modal-rates') renderRatesModal();
+        if (id === 'modal-history') renderHistoryModal();
+        if (id === 'modal-rate-history') renderRateHistoryModal();
+        if (id === 'modal-pagomovil') {
+          document.getElementById('pm-bank').value = state.pagoMovil.bank || '';
+          document.getElementById('pm-id').value = state.pagoMovil.id || '';
+          document.getElementById('pm-phone').value = state.pagoMovil.phone || '';
+        }
+        if (id === 'modal-share') drawAppQR();
+      }
+
+      function closeModal(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      }
+
+      // =======================================================================
+      // 7. VERTICAL SWIPE, WHEEL ON HEADER/TOP AREA & LONG PRESS RECEIPTS
+      // =======================================================================
+      function switchCalculator(targetIndex) {
+        if (targetIndex !== 0 && targetIndex !== 1) return;
+        state.activeCalcIndex = targetIndex;
+        saveToStorage();
+        const track = document.getElementById('calc-track');
+        if (track) {
+          track.classList.remove('is-dragging');
+          track.style.transform = `translateY(-${state.activeCalcIndex * 50}%)`;
+        }
+        renderHeader();
+        renderSwitcherUI();
+        renderDisplay(state.activeCalcIndex);
+        renderHistoryBadge();
+      }
+
+      function setupVerticalSwipeNavigation() {
+        const viewport = document.getElementById('swipe-viewport');
+        const track = document.getElementById('calc-track');
+        const headerEl = document.getElementById('app-header');
+        const switcherBar = document.getElementById('account-switcher-bar');
+        if (!viewport || !track) return;
+
+        let startY = 0;
+        let currentDeltaY = 0;
+        let isDragging = false;
+        let wheelLock = false;
+
+        viewport.addEventListener('touchstart', (e) => {
+          if (!e.touches || e.touches.length === 0) return;
+          if (e.target.closest('button, .copy-btn')) return;
+          startY = e.touches[0].clientY;
+          currentDeltaY = 0;
+          isDragging = true;
+          track.classList.add('is-dragging');
+        }, { passive: true });
+
+        viewport.addEventListener('touchmove', (e) => {
+          if (!isDragging || !e.touches || e.touches.length === 0) return;
+          const y = e.touches[0].clientY;
+          currentDeltaY = y - startY;
+          const viewportHeight = viewport.clientHeight || 1;
+          const basePercent = -state.activeCalcIndex * 50;
+          const clampedDelta = Math.max(-viewportHeight * 0.45, Math.min(viewportHeight * 0.45, currentDeltaY));
+          const deltaPercent = (clampedDelta / viewportHeight) * 50;
+          track.style.transform = `translateY(${basePercent + deltaPercent}%)`;
+        }, { passive: true });
+
+        const finishTouchSwipe = () => {
+          if (!isDragging) return;
+          isDragging = false;
+          track.classList.remove('is-dragging');
+          const threshold = 55;
+          if (currentDeltaY < -threshold && state.activeCalcIndex === 0) {
+            switchCalculator(1);
+          } else if (currentDeltaY > threshold && state.activeCalcIndex === 1) {
+            switchCalculator(0);
+          } else {
+            track.style.transform = `translateY(-${state.activeCalcIndex * 50}%)`;
+          }
+          currentDeltaY = 0;
+        };
+
+        viewport.addEventListener('touchend', finishTouchSwipe, { passive: true });
+        viewport.addEventListener('touchcancel', finishTouchSwipe, { passive: true });
+
+        const handleWheelSwitch = (e) => {
+          if (wheelLock) return;
+          if (Math.abs(e.deltaY) < 28) return;
+          wheelLock = true;
+          if (e.deltaY > 0 && state.activeCalcIndex === 0) {
+            switchCalculator(1);
+          } else if (e.deltaY < 0 && state.activeCalcIndex === 1) {
+            switchCalculator(0);
+          }
+          setTimeout(() => {
+            wheelLock = false;
+          }, 320);
+        };
+
+        viewport.addEventListener('wheel', handleWheelSwitch, { passive: true });
+        if (headerEl) headerEl.addEventListener('wheel', handleWheelSwitch, { passive: true });
+        if (switcherBar) switcherBar.addEventListener('wheel', handleWheelSwitch, { passive: true });
+
+        [0, 1].forEach((calcIdx) => {
+          const zone = document.getElementById(`display-zone-${calcIdx}`);
+          if (!zone) return;
+          const startPress = () => {
+            clearTimeout(activeLongPressTimer);
+            activeLongPressTimer = setTimeout(() => {
+              generateReceiptImage(false, calcIdx);
+            }, 600);
+          };
+          const cancelPress = () => {
+            clearTimeout(activeLongPressTimer);
+          };
+          zone.addEventListener('mousedown', startPress);
+          zone.addEventListener('touchstart', startPress, { passive: true });
+          zone.addEventListener('mouseup', cancelPress);
+          zone.addEventListener('mouseleave', cancelPress);
+          zone.addEventListener('touchend', cancelPress, { passive: true });
+          zone.addEventListener('touchmove', cancelPress, { passive: true });
+        });
+
+        document.querySelectorAll('.copy-btn').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const type = btn.getAttribute('data-copy');
+            const calcIdx = parseInt(btn.getAttribute('data-calc'), 10);
+            const calc = state.calcs[calcIdx];
+            const { foreign, ves } = getCalculatedAmounts(calcIdx);
+            const meta = RATE_META[calc.activeRateType];
+            if (type === 'foreign') {
+              copyTextToClipboard(`${meta.symbol} ${formatCurrencyExactDisplay(foreign)}`, 'Monto en divisa copiado');
+            } else {
+              copyTextToClipboard(`${formatCurrencyExactDisplay(ves)} Bs`, 'Monto en Bolívares copiado');
+            }
+          });
+        });
+      }
+
+      // =======================================================================
+      // 8. APP INITIALIZATION & EVENT BINDINGS
+      // =======================================================================
+      function initApp() {
+        setupPwaSupport();
+        loadFromStorage();
+        // Limpieza adicional al salir; el reinicio al abrir también cubre cierres
+        // del sistema operativo en los que pagehide no llegue a ejecutarse.
+        window.addEventListener('pagehide', () => {
+          try {
+            localStorage.removeItem(STORAGE_KEYS.CALCS);
+            localStorage.removeItem(STORAGE_KEYS.ACTIVE_CALC);
+          } catch (_) {}
+        });
+        renderAll();
+        setupVerticalSwipeNavigation();
+        fetchLiveRates(false);
+
+        document.getElementById('menu-install-pwa').addEventListener('click', triggerPwaInstall);
+
+        document.querySelectorAll('[data-switch-calc]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            switchCalculator(parseInt(btn.getAttribute('data-switch-calc'), 10));
+          });
+        });
+
+        document.getElementById('btn-swipe-toggle').addEventListener('click', () => {
+          switchCalculator(state.activeCalcIndex === 0 ? 1 : 0);
+        });
+
+        document.querySelectorAll('[data-num]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            handleDigit(btn.getAttribute('data-num'), parseInt(btn.getAttribute('data-calc'), 10));
+          });
+        });
+
+        document.querySelectorAll('[data-op]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            handleOperator(btn.getAttribute('data-op'), parseInt(btn.getAttribute('data-calc'), 10));
+          });
+        });
+
+        document.querySelectorAll('[data-action]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const calcIdx = parseInt(btn.getAttribute('data-calc'), 10);
+            const action = btn.getAttribute('data-action');
+            if (action === 'clear') handleClear(calcIdx);
+            if (action === 'backspace') handleBackspace(calcIdx);
+            if (action === 'percent') handlePercent(calcIdx);
+            if (action === 'decimal') handleDecimal(calcIdx);
+            if (action === 'sign') handleToggleSign(calcIdx);
+            if (action === 'equals') handleEquals(true, calcIdx);
+          });
+        });
+
+        [0, 1].forEach((calcIdx) => {
+          document.getElementById(`arith-panel-${calcIdx}`).addEventListener('click', (e) => {
+            if (e.target.closest('[data-action="sign"]')) return;
+            setInputMode('arith', calcIdx);
+          });
+
+          document.getElementById(`card-foreign-${calcIdx}`).addEventListener('click', (e) => {
+            if (e.target.closest('.copy-btn')) return;
+            setInputMode('foreign', calcIdx);
+          });
+
+          document.getElementById(`card-ves-${calcIdx}`).addEventListener('click', (e) => {
+            if (e.target.closest('.copy-btn')) return;
+            setInputMode('ves', calcIdx);
+          });
+
+          document.getElementById(`btn-swap-currency-${calcIdx}`).addEventListener('click', () => {
+            const calc = state.calcs[calcIdx];
+            if (calc.inputMode === 'foreign') {
+              setInputMode('ves', calcIdx);
+            } else if (calc.inputMode === 'ves') {
+              setInputMode('foreign', calcIdx);
+            } else {
+              setInputMode('ves', calcIdx);
+            }
+          });
+        });
+
+        document.querySelectorAll('[data-action-pm]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const calcIdx = parseInt(btn.getAttribute('data-action-pm'), 10);
+            const { bank, id, phone } = state.pagoMovil;
+            if (!bank && !id && !phone) {
+              openModal('modal-pagomovil');
+              showToast('Configura tus datos de Pago Móvil primero');
+              return;
+            }
+            const { ves } = getCalculatedAmounts(calcIdx);
+            const text = `Datos Pago Móvil:\nBanco: ${bank}\nCédula: ${id}\nTeléfono: ${phone}\nMonto: ${formatCurrencyExactDisplay(ves)} Bs`;
+            copyTextToClipboard(text, `Pago Móvil + Monto (${state.calcs[calcIdx].name}) copiados`);
+          });
+        });
+
+        document.querySelectorAll('[data-action-receipt]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            generateReceiptImage(false, parseInt(btn.getAttribute('data-action-receipt'), 10));
+          });
+        });
+
+        document.querySelectorAll('[data-action-save]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            addCurrentToHistory('', parseInt(btn.getAttribute('data-action-save'), 10));
+          });
+        });
+
+        document.getElementById('btn-open-rates').addEventListener('click', () => openModal('modal-rates'));
+        document.getElementById('btn-quick-history').addEventListener('click', () => openModal('modal-history'));
+        document.getElementById('btn-open-menu').addEventListener('click', () => openModal('modal-menu'));
+
+        document.getElementById('btn-refresh-rates').addEventListener('click', () => fetchLiveRates(true));
+        document.querySelectorAll('[data-select-rate]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const type = btn.getAttribute('data-select-rate');
+            const calc = getActiveCalc();
+            calc.activeRateType = type;
+            recordRateHistory(RATE_META[type].label, getRateValueForCalc());
+            saveToStorage();
+            renderAll();
+            closeModal('modal-rates');
+            showToast(`${calc.name}: ${RATE_META[type].label}`);
+          });
+        });
+
+        document.getElementById('btn-set-custom-rate').addEventListener('click', () => {
+          const val = parseFloat(document.getElementById('input-custom-rate').value);
+          if (!val || val <= 0) {
+            showToast('Ingresa una tasa válida');
+            return;
+          }
+          const calc = getActiveCalc();
+          calc.customRate = val;
+          calc.activeRateType = 'custom';
+          recordRateHistory(`Personalizada (${calc.name})`, val);
+          saveToStorage();
+          renderAll();
+          closeModal('modal-rates');
+          showToast(`${calc.name} fijada en ${formatExactVE(val, 2, 8)} Bs`);
+        });
+
+        document.getElementById('menu-open-history').addEventListener('click', () => {
+          closeModal('modal-menu');
+          openModal('modal-history');
+        });
+        document.getElementById('menu-open-pagomovil').addEventListener('click', () => {
+          closeModal('modal-menu');
+          openModal('modal-pagomovil');
+        });
+        document.getElementById('menu-open-rate-history').addEventListener('click', () => {
+          closeModal('modal-menu');
+          openModal('modal-rate-history');
+        });
+        document.getElementById('menu-toggle-theme').addEventListener('click', () => {
+          state.theme = state.theme === 'light' ? 'dark' : 'light';
+          saveToStorage();
+          applyTheme();
+        });
+        document.getElementById('menu-open-share').addEventListener('click', () => {
+          closeModal('modal-menu');
+          openModal('modal-share');
+        });
+
+        document.getElementById('btn-clear-history').addEventListener('click', clearAllHistory);
+        document.getElementById('btn-export-whatsapp').addEventListener('click', exportHistoryWhatsApp);
+        document.getElementById('btn-export-image-report').addEventListener('click', () => {
+          const calc = getActiveCalc();
+          if (calc.history.length === 0) {
+            showToast('El historial está vacío');
+            return;
+          }
+          closeModal('modal-history');
+          generateReceiptImage(true, state.activeCalcIndex);
+        });
+
+        document.getElementById('btn-clear-rate-history').addEventListener('click', () => {
+          state.rateHistory = [];
+          saveToStorage();
+          renderRateHistoryModal();
+          showToast('Registro de tasas limpiado');
+        });
+
+        document.getElementById('btn-save-pagomovil').addEventListener('click', () => {
+          state.pagoMovil = {
+            bank: document.getElementById('pm-bank').value.trim(),
+            id: document.getElementById('pm-id').value.trim(),
+            phone: document.getElementById('pm-phone').value.trim()
+          };
+          saveToStorage();
+          closeModal('modal-pagomovil');
+          showToast('Datos de Pago Móvil guardados');
+        });
+
+        document.getElementById('btn-test-copy-pm').addEventListener('click', () => {
+          state.pagoMovil = {
+            bank: document.getElementById('pm-bank').value.trim(),
+            id: document.getElementById('pm-id').value.trim(),
+            phone: document.getElementById('pm-phone').value.trim()
+          };
+          saveToStorage();
+          const { ves } = getCalculatedAmounts();
+          const text = `Datos Pago Móvil:\nBanco: ${state.pagoMovil.bank}\nCédula: ${state.pagoMovil.id}\nTeléfono: ${state.pagoMovil.phone}\nMonto: ${formatCurrencyExactDisplay(ves)} Bs`;
+          copyTextToClipboard(text, 'Copiado al portapapeles');
+        });
+
+        document.getElementById('btn-download-receipt').addEventListener('click', () => {
+          const img = document.getElementById('receipt-preview-img');
+          const link = document.createElement('a');
+          link.download = `monto-${getActiveCalc().name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.png`;
+          link.href = img.src;
+          link.click();
+          showToast('Comprobante descargado');
+        });
+
+        document.getElementById('btn-share-receipt-wa').addEventListener('click', () => {
+          const calc = getActiveCalc();
+          const { foreign, ves, rate } = getCalculatedAmounts();
+          const meta = RATE_META[calc.activeRateType];
+          const msg = `*Comprobante Monto (${calc.name})*\n${meta.symbol} ${formatCurrencyExactDisplay(foreign)} = *${formatCurrencyExactDisplay(ves)} Bs*\nTasa (${meta.label}): ${formatExactVE(rate, 2, 8)} Bs`;
+          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+        });
+
+        document.getElementById('btn-copy-app-link').addEventListener('click', () => {
+          copyTextToClipboard(window.location.href || 'https://montoapp.net', 'Enlace copiado');
+        });
+
+        document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+          btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close-modal')));
+        });
+
+        document.querySelectorAll('[id^="modal-"]').forEach((overlay) => {
+          overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal(overlay.id);
+          });
+        });
+
+        document.addEventListener('keydown', (e) => {
+          if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+          if (e.key >= '0' && e.key <= '9') {
+            e.preventDefault();
+            handleDigit(e.key);
+          } else if (e.key === '.' || e.key === ',') {
+            e.preventDefault();
+            handleDecimal();
+          } else if (['+', '-', '*', '/'].includes(e.key)) {
+            e.preventDefault();
+            handleOperator(e.key);
+          } else if (e.key === '%') {
+            e.preventDefault();
+            handlePercent();
+          } else if (e.key === 'Enter' || e.key === '=') {
+            e.preventDefault();
+            handleEquals(true);
+          } else if (e.key === 'Backspace') {
+            e.preventDefault();
+            handleBackspace();
+          } else if (e.key === 'Delete' || e.key.toLowerCase() === 'c') {
+            e.preventDefault();
+            handleClear();
+          } else if (e.key === 'Escape') {
+            document.querySelectorAll('[id^="modal-"]').forEach((m) => m.classList.add('hidden'));
+          }
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initApp);
+      } else {
+        initApp();
+      }
+    })();
+  </script>
+</body>
+</html>
